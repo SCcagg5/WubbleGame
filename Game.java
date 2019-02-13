@@ -74,7 +74,6 @@ class calcul extends Thread implements Runnable{
 			g.drawImage(imgs[i][i2], 0, 0, obj);
 	    }
 	}
-	
     }
 
     public calcul(Game G) {
@@ -108,7 +107,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
     private int _minfps = OPTION.MIN_FRAME;
     private int _maxfps = OPTION.MAX_FRAME;
 
-    private int inv = 1;
+    private int inv = 0;
     
     private int debug = 0;
     private int objnumber = 0;
@@ -146,6 +145,19 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	addKeyListener(this);
 	frame.requestFocusInWindow();
 	this.start();
+    }
+
+    public void addblock(block b) {
+	if (b.type == "none")
+	    return;
+	for (int i = 0; i < blockbase.length; i++)
+	    if (blockbase[i] == null){
+		blockbase[i] = b.clone();
+		blockbase[i].picked = false;
+		blockbase[i].pickable = true;
+		blockbase[i].gravity = true;
+		return;
+	    }
     }
 
     private synchronized void start() {
@@ -221,10 +233,6 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	    new Thread(new calcul(g, this, this.perso, this.blockbase));
 	    load = false;
 	}
-	for (int i = 0; i < blockbase.length; i++){
-	    if (this.blockbase[i] != null)
-		g.drawImage(this.blockbase[i].getimg(), this.blockbase[i].Y(), this.blockbase[i].X(), this);
-	}
 	if (inv > 0) {
 	    g.setColor(Color.LIGHT_GRAY);
 	    g.fillRect(11,4,240,193);
@@ -236,6 +244,10 @@ public class Game extends Canvas implements Runnable, KeyListener {
 		if (b != null)
 		    g.drawImage(b.getimg(), b.Y(), b.X(), this);
 	    }
+	}
+	for (int i = 0; i < blockbase.length; i++){
+	    if (this.blockbase[i] != null)
+		g.drawImage(this.blockbase[i].getimg(), this.blockbase[i].Y(), this.blockbase[i].X(), this);
 	}
 	g.drawImage(this.perso.getimg(), this.perso.Y(), this.perso.X(), this);
 	g.setColor(Color.YELLOW);
@@ -320,6 +332,8 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	    inv = (inv+1) % 2;
 	} else if (e.getKeyCode() == 69) {
 	    this.perso.pick(this.blockbase);
+	} else if (e.getKeyCode() == 82) {
+	    this.addblock(this.perso.drop());
 	}
     }
 
@@ -675,6 +689,17 @@ class personnage extends object{
 		}
 	    }	
 	}
+    }
+
+    public block drop() {
+	block[] b = this.inv.getinv();
+	for(int i = 1; i < b.length; i++)
+	    if(b[i] == null && b[i - 1] != null) {
+		block ret = b[i - 1].clone();
+		this.inv.remove(b[i - 1].type);
+		return ret;
+	    }
+	return (new block(-100, -100, true, true, 3, "none", true));
     }
 
     public void move(int  i) {
