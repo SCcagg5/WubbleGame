@@ -13,9 +13,10 @@ class OPTION {
 
     public static final int MAX_GRAV = 2;
     public static final boolean GRAV = true;
-    
-    public static final String[][][] OBJECT = new String[][][] {{{"./assets/perso.png","./assets/perso_wink.png"}, {"./assets/perso_down.png"}, {"./assets/perso_jump.png"}, {"./assets/perso_rr1.png", "./assets/perso_rr2.png", "./assets/perso_rr3.png", "./assets/perso_rr4.png"}, {"./assets/perso_rl1.png", "./assets/perso_rl2.png", "./assets/perso_rl3.png", "./assets/perso_rl4.png"}, { "./assets/perso_sr.png"}, { "./assets/perso_sl.png"}}, {{"./assets/block1.png"}}, {{"./assets/block2.png"}}};
-    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {45,82,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}}, {{0, 128, 0, 128}}};
+
+    public static final Image  NULL = Toolkit.getDefaultToolkit().getImage("");
+    public static final String[][][] OBJECT = new String[][][] {{{"./assets/perso.png","./assets/perso_wink.png"}, {"./assets/perso_down.png"}, {"./assets/perso_jump.png"}, {"./assets/perso_rr1.png", "./assets/perso_rr2.png", "./assets/perso_rr3.png", "./assets/perso_rr4.png"}, {"./assets/perso_rl1.png", "./assets/perso_rl2.png", "./assets/perso_rl3.png", "./assets/perso_rl4.png"}, { "./assets/perso_sr.png"}, { "./assets/perso_sl.png"}}, {{"./assets/block1.png"}}, {{"./assets/block2.png"}}, {{"./assets/key_blue_1.png", "./assets/key_blue_2.png", "./assets/key_blue_3.png", "./assets/key_blue_4.png", "./assets/key_blue_5.png", "./assets/key_blue_6.png", "./assets/key_blue_7.png", "./assets/key_blue_8.png", "./assets/key_blue_9.png"}}, {{"./assets/key_red_5.png", "./assets/key_red_6.png", "./assets/key_red_7.png", "./assets/key_red_8.png", "./assets/key_red_1.png", "./assets/key_red_2.png", "./assets/key_red_3.png", "./assets/key_red_4.png"}}};
+    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {37,90,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}}, {{0, 128, 0, 128}}, {{40, 82, 26, 103}}, {{40, 82, 26, 103}}};
 
     public static final int WIDTH = 160;
     public static final int HEIGHT = WIDTH / 16 * 9;
@@ -50,22 +51,50 @@ class calcul extends Thread implements Runnable{
 	p.move(i);
     }
 
-    public calcul(block b){
-	b.gravity();
+    public calcul(block[] b){
+	for (int i = 0; i < b.length; i++){
+	    if (b[i] != null){
+		b[i].listblock(b);
+		b[i].gravity();
+	    }
+	}
     }
 
-    public calcul(Graphics g, Game obj)
+    public calcul(Graphics g, Game obj, personnage perso, block[] block)
     {
-	Image[][] imgs = obj.perso.getimgs();
+	Image[][] imgs = perso.getimgs();
 	for (int i = 0; i < imgs.length; i++)
 	    for (int i2 = 0; i2 < OPTION.LIMG(imgs[i]); i2++)
-		g.drawImage(imgs[i][i2], obj.perso.Y(), obj.perso.X(), obj);
+		g.drawImage(imgs[i][i2], 0, 0, obj);
+	for (int i3 = 0; i3 < block.length; i3++) {
+	    if(block[i3] != null) {
+		imgs = block[i3].getimgs();
+		for (int i = 0; i < imgs.length; i++)
+		    for (int i2 = 0; i2 < OPTION.LIMG(imgs[i]); i2++)
+			g.drawImage(imgs[i][i2], 0, 0, obj);
+	    }
+	}
+	
+    }
+
+    public calcul(Game G) {
+	new Thread(new calcul(G.blockbase));
+	if(G.pressed.contains("1") && (G.perso.nextCollide("right") == 0 || G.perso.nextCollide("left") == 0))
+	    G.pressed.remove("1");
+	G.perso.pressed = G.pressed;
+	G.perso.listblock(G.blockbase);
+	for (int i = 0; i < G.pressed.toArray().length; i++){
+	    new Thread(new calcul(G.perso, Integer.parseInt((String)G.pressed.toArray()[i])));
+	}
+	G.perso.gravity();
+	if(!G.perso.canjump && G.perso.nextCollide("down") == 0)
+	    G.perso.canjump = true;
     }
 }
 
 public class Game extends Canvas implements Runnable, KeyListener {
     private static final long serialVersionUID = 1L;
-    private List<String> pressed = new ArrayList<>();
+    public List<String> pressed = new ArrayList<>();
     public static final String NAME = "Wubble";
     static JButton play;
     static Container pane;
@@ -73,7 +102,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
     public static Image icon = Toolkit.getDefaultToolkit().getImage("./assets/perso.png");
     
     public personnage perso = new personnage(0);
-    private block[] blockbase = new block[OPTION.WIDTH*2*OPTION.SCALE / 128 + 1];
+    public block[] blockbase = new block[OPTION.WIDTH*2*OPTION.SCALE / 128 + 4];
     private int FRAME = OPTION.FRAME;
     private int _FPS;
     private int _minfps = OPTION.MIN_FRAME;
@@ -127,9 +156,13 @@ public class Game extends Canvas implements Runnable, KeyListener {
     }
 
     public void generateterrain() {
-	for (int i = 0; i < blockbase.length; i++) {
-	    blockbase[i] = new block((int)(Math.random() * 5 + 4) * 20, i*128, false, true, (int)(Math.random() * 2 + 1));
+	int i;
+	for (i = 0; i < blockbase.length - 3; i++) {
+	    blockbase[i] = new block((int)(Math.random() * 20 + 10) * 20, i*128, false, true, (int)(Math.random() * 2 + 1));
 	}
+	blockbase[i] = new block(0, 180, false, true, 1);
+	blockbase[i + 1] = new block(0, 500, true, true, 3, "key_blue");
+	blockbase[i + 2] = new block(0, 600, true, true, 4, "key_red");
     }	
 
     public void run() {
@@ -180,24 +213,18 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	    createBufferStrategy(3);
 	    return;
 	}
-	for (int i = 0; i < blockbase.length; i++){
-	    new Thread(new calcul(blockbase[i]));
-	}
-	perso.listblock(blockbase);
-	for (int i = 0; i < pressed.toArray().length; i++){
-	    new Thread(new calcul(perso, Integer.parseInt((String)pressed.toArray()[i])));
-	}
-	perso.gravity();
+	new Thread(new calcul(this));
 	Graphics g = bs.getDrawGraphics();
 	g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
 	if(load){
-	    new Thread(new calcul(g, this));
+	    new Thread(new calcul(g, this, this.perso, this.blockbase));
 	    load = false;
 	}
-	g.drawImage(this.perso.getimg(), this.perso.Y(), this.perso.X(), this);
 	for (int i = 0; i < blockbase.length; i++){
-	    g.drawImage(this.blockbase[i].getimg(), this.blockbase[i].Y(), this.blockbase[i].X(), this);
+	    if (this.blockbase[i] != null)
+		g.drawImage(this.blockbase[i].getimg(), this.blockbase[i].Y(), this.blockbase[i].X(), this);
 	}
+	g.drawImage(this.perso.getimg(), this.perso.Y(), this.perso.X(), this);
 	g.setColor(Color.YELLOW);
 	if (debug > 0) {
 	    g.drawString("FPS: " + this._FPS, getWidth() - 165, 20);
@@ -258,9 +285,10 @@ public class Game extends Canvas implements Runnable, KeyListener {
     }
 
     public void keyPressed(KeyEvent e) {
-	if (e.getKeyCode() > 36 && e.getKeyCode() < 41 && !pressed.contains("" + (e.getKeyCode() - 37)))
-	    pressed.add("" + (e.getKeyCode()-37));
-	else if (e.getKeyCode() == 72) {
+	if (e.getKeyCode() > 36 && e.getKeyCode() < 41 && !pressed.contains("" + (e.getKeyCode() - 37))){
+	    if ((e.getKeyCode() != 38 || this.perso.canjump) || !OPTION.GRAV)
+		pressed.add("" + (e.getKeyCode()-37));
+	} else if (e.getKeyCode() == 72) {
 	    debug = (debug+1) % 4;
 	    if (debug < 3)
 		objnumber = 0;
@@ -296,15 +324,18 @@ class object {
     protected Image[][] imgs;
     protected int count;
     public int[][] collide;
-    private boolean overlaps;
+    public boolean overlaps;
     private boolean gravity;
     private int vector;
     public String type;
     private block[] blocks;
+    public List<String> pressed;
+    public boolean godown;
     
     public object(int x, int y, int life, String[][] imgs, int[][] collide,boolean overlaps, boolean gravity, String name) {
-	this.type = name;
+       	this.type = name;
 	this.X = x;
+	this.godown = true;
 	this.Y = y;
 	this.life = life;
 	this.state = 0;
@@ -314,6 +345,7 @@ class object {
 	this.collide = collide;
 	this.gravity = gravity;
 	this.vector = 1;
+	this.pressed = new ArrayList<String>();
     }
 
     public void listblock(block[] b) {
@@ -380,8 +412,6 @@ class object {
     }
     
     public int nextCollide(String dir){
-	if(this.overlaps)
-	    return 10000;
 	int wall = this.touchWall(dir);
 	int obj = this.nextobj(dir);
 	return (obj > wall ? wall : obj);
@@ -390,9 +420,8 @@ class object {
     public int blockcollide(block obj, String dir){
 	int ret = 0;
 	if (dir == "down"){
-	    if (this.Y() + this.collide[this.state][0] > obj.Y() + obj.collide[obj.state()][0] && this.Y() + this.collide[this.state][0] < obj.Y() + obj.collide[obj.state()][1] ||
-		this.Y() + this.collide[this.state][1] > obj.Y() + obj.collide[obj.state()][0] && this.Y() + this.collide[this.state][1] < obj.Y() + obj.collide[obj.state()][1]) {
-
+	    if (this.Y() + this.collide[this.state][0] >  obj.Y() + obj.collide[obj.state()][0] && this.Y() + this.collide[this.state][0] <  obj.Y() + obj.collide[obj.state()][1] ||
+		this.Y() + this.collide[this.state][1] >  obj.Y() + obj.collide[obj.state()][0] && this.Y() + this.collide[this.state][1] <  obj.Y() + obj.collide[obj.state()][1]) {
 		ret = obj.X() - this.X() - this.collide[this.state()][3];
 		if (ret > -(obj.collide[obj.state()][3] - obj.collide[obj.state()][2]) && ret < 0)
 		    ret = 0;
@@ -403,8 +432,13 @@ class object {
 	    if (this.X() + this.collide[this.state][2] > obj.X() + obj.collide[obj.state()][2] && this.X() + this.collide[this.state][2] < obj.X() + obj.collide[obj.state()][3] ||
 		this.X() + this.collide[this.state][3] > obj.X() + obj.collide[obj.state()][2] && this.X() + this.collide[this.state][3] < obj.X() + obj.collide[obj.state()][3]) {
 		ret = this.Y() - this.collide[this.state()][1] - obj.Y() + obj.collide[obj.state()][2];
-		if(ret == 0)
+		if(ret == 0 && type == "perso"){
+		    if (this.pressed.contains("1") && this.godown && state != 6){
+			this.godown = false;
+			this.X(14);
+		    }
 		    this.state = 6;
+		}
 		return ret;
 	    }
 	}
@@ -412,7 +446,7 @@ class object {
 	    if (this.X() + this.collide[this.state][2] > obj.X() + obj.collide[obj.state()][2] && this.X() + this.collide[this.state][2] < obj.X() + obj.collide[obj.state()][3] ||
 		this.X() + this.collide[this.state][3] > obj.X() + obj.collide[obj.state()][2] && this.X() + this.collide[this.state][3] < obj.X() + obj.collide[obj.state()][3]) {
 		ret = obj.Y() + obj.collide[obj.state()][2] - this.Y() - this.collide[this.state()][1];
-		if(ret == 0)
+		if(ret == 0 && type == "perso")
 		    this.state = 5;
 		return ret;
 	    }
@@ -431,8 +465,10 @@ class object {
 	int nouv = 0;
 	if (this.blocks != null)
 	    for (int i = 0; i < this.blocks.length; i++) {
-		nouv = blockcollide(this.blocks[i], dir);
-		ret = ret > nouv && nouv >= 0 ? nouv : ret;
+		if(this.blocks[i] != null && this != this.blocks[i] && !this.blocks[i].overlaps) {
+		    nouv = blockcollide(this.blocks[i], dir);
+		    ret = ret > nouv && nouv >= 0 ? nouv : ret;
+		}
 	    }
 	return ret;
     }
@@ -453,6 +489,8 @@ class object {
     }
 
     public Image getimg() {
+	if (life == 0)
+	    return OPTION.NULL;
 	if (state >= imgs.length)
 	    state = 0;
 	count++;
@@ -463,13 +501,21 @@ class object {
 	int ret = ((int) Math.ceil(count * n / f));
 	return this.imgs[state][ret];
     }
+
+    public Image[][] getimgs(){
+	return this.imgs;
+    }
 }
 
 class inventory { }
 
 class block extends object {
     public block(int x, int y, boolean over, boolean grav, int i){
-	super(x, y, 10000, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, "block");
+	super(x, y, 1000, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, "block");
+    }
+
+    public block(int x, int y, boolean over, boolean grav, int i, String type){
+	super(x, y, 1000, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, type);
     }
 }
 
@@ -477,14 +523,18 @@ class personnage extends object{
 
     private int speed;
     private int wink;
+    public boolean canjump;
 
     public personnage(int i){
 	super(0, 0, 100, OPTION.OBJECT[i], OPTION.COLLIDE[i], false, true, "perso");
 	speed = OPTION.GETMOVE(6);
 	wink = 0;
+	canjump = false;
     }
     
     public Image getimg() {
+	if (life() == 0)
+	    return OPTION.NULL;
 	if (state >= imgs.length)
 	    state = 0;
 	count++;
@@ -507,10 +557,6 @@ class personnage extends object{
 	return this.imgs[state][ret];
     }
 
-    public Image[][] getimgs(){
-	return this.imgs;
-    }
-
     public void move(int  i) {
 	if (i % 2 == 0) {
 	    if(i == 2)
@@ -522,12 +568,13 @@ class personnage extends object{
 	    if (i == 3) {
 		if (this.state() == 0 || this.state == 2)
 		    this.state(1);
-		this.move(OPTION.GETMOVE(3), "down");
+		this.move(OPTION.GRAV ? OPTION.GETMOVE(3) : this.speed, "down");
 	    }else {
-		if ((this.state() == 0 || this.state() == 5 && nextCollide("right") != 0 || this.state() == 6 && nextCollide("left") != 0) && nextCollide("down") != 0)
-		this.state(2);
-		if (this.state() != 6 && this.state() != 5)
-		    this.move(OPTION.GETMOVE(20), "up");
+		if ((this.state() == 0 || this.state() == 5 || this.state() == 6) && nextCollide("down") != 0)
+		    this.state(2);
+		this.move(OPTION.GRAV ? OPTION.GETMOVE(20) : this.speed, "up");
+		canjump = false;
+		this.godown = true;
 	    }
 
 	}
