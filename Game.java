@@ -16,7 +16,7 @@ class OPTION {
 
     public static final Image  NULL = Toolkit.getDefaultToolkit().getImage("");
     public static final String[][][] OBJECT = new String[][][] {{{"./assets/perso.png","./assets/perso_wink.png"}, {"./assets/perso_down.png"}, {"./assets/perso_jump.png"}, {"./assets/perso_rr1.png", "./assets/perso_rr2.png", "./assets/perso_rr3.png", "./assets/perso_rr4.png"}, {"./assets/perso_rl1.png", "./assets/perso_rl2.png", "./assets/perso_rl3.png", "./assets/perso_rl4.png"}, { "./assets/perso_sr.png"}, { "./assets/perso_sl.png"}}, {{"./assets/block1.png"}}, {{"./assets/block2.png"}}, {{"./assets/key_blue_1.png", "./assets/key_blue_2.png", "./assets/key_blue_3.png", "./assets/key_blue_4.png", "./assets/key_blue_5.png", "./assets/key_blue_6.png", "./assets/key_blue_7.png", "./assets/key_blue_8.png", "./assets/key_blue_9.png"}}, {{"./assets/key_red_5.png", "./assets/key_red_6.png", "./assets/key_red_7.png", "./assets/key_red_8.png", "./assets/key_red_1.png", "./assets/key_red_2.png", "./assets/key_red_3.png", "./assets/key_red_4.png"}}};
-    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {37,90,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}}, {{0, 128, 0, 128}}, {{40, 82, 26, 103}}, {{40, 82, 26, 103}}};
+    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {38,89,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}}, {{0, 128, 0, 128}}, {{40, 82, 26, 103}}, {{40, 82, 26, 103}}};
 
     public static final int WIDTH = 160;
     public static final int HEIGHT = WIDTH / 16 * 9;
@@ -79,9 +79,9 @@ class calcul extends Thread implements Runnable{
 
     public calcul(Game G) {
 	new Thread(new calcul(G.blockbase));
+	G.perso.pressed = G.pressed;
 	if(G.pressed.contains("1") && (G.perso.nextCollide("right") == 0 || G.perso.nextCollide("left") == 0))
 	    G.pressed.remove("1");
-	G.perso.pressed = G.pressed;
 	G.perso.listblock(G.blockbase);
 	for (int i = 0; i < G.pressed.toArray().length; i++){
 	    new Thread(new calcul(G.perso, Integer.parseInt((String)G.pressed.toArray()[i])));
@@ -102,12 +102,14 @@ public class Game extends Canvas implements Runnable, KeyListener {
     public static Image icon = Toolkit.getDefaultToolkit().getImage("./assets/perso.png");
     
     public personnage perso = new personnage(0);
-    public block[] blockbase = new block[OPTION.WIDTH*2*OPTION.SCALE / 128 + 4];
+    public block[] blockbase = new block[100];
     private int FRAME = OPTION.FRAME;
     private int _FPS;
     private int _minfps = OPTION.MIN_FRAME;
     private int _maxfps = OPTION.MAX_FRAME;
 
+    private int inv = 1;
+    
     private int debug = 0;
     private int objnumber = 0;
 
@@ -157,12 +159,11 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
     public void generateterrain() {
 	int i;
-	for (i = 0; i < blockbase.length - 3; i++) {
+	for (i = 0; i < OPTION.WIDTH*2*OPTION.SCALE / 128 + 1; i++) {
 	    blockbase[i] = new block((int)(Math.random() * 20 + 10) * 20, i*128, false, true, (int)(Math.random() * 2 + 1));
 	}
-	blockbase[i] = new block(0, 180, false, true, 1);
-	blockbase[i + 1] = new block(0, 500, true, true, 3, "key_blue");
-	blockbase[i + 2] = new block(0, 600, true, true, 4, "key_red");
+	blockbase[i] = new block(0, 500, true, true, 3, "key_blue", true);
+	blockbase[i + 1] = new block(0, 600, true, true, 4, "key_red", true);
     }	
 
     public void run() {
@@ -224,6 +225,18 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	    if (this.blockbase[i] != null)
 		g.drawImage(this.blockbase[i].getimg(), this.blockbase[i].Y(), this.blockbase[i].X(), this);
 	}
+	if (inv > 0) {
+	    g.setColor(Color.LIGHT_GRAY);
+	    g.fillRect(11,4,240,193);
+	    block b;
+	    g.setColor(Color.BLACK);
+	    for (int i = 0; i < perso.inv.getinv().length; i++) {
+		b = perso.inv.getinv()[i];
+		g.fillRect(i%4*60 + 12, 5 + i/4 * 96, 58, 95);
+		if (b != null)
+		    g.drawImage(b.getimg(), b.Y(), b.X(), this);
+	    }
+	}
 	g.drawImage(this.perso.getimg(), this.perso.Y(), this.perso.X(), this);
 	g.setColor(Color.YELLOW);
 	if (debug > 0) {
@@ -231,8 +244,17 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	    if(debug > 1)
 		if (objnumber == 0)
 		    getdata(g, this.perso);
-	        else
-		    getdata(g, this.blockbase[objnumber - 1]);
+	        else {
+		    while (this.blockbase[objnumber - 1] == null) {
+			objnumber = (objnumber + 1) % (1 + this.blockbase.length);
+			if (objnumber == 0){
+			    getdata(g, this.perso);
+			    break;
+			}
+		    }
+		    if (objnumber != 0)
+			getdata(g, this.blockbase[objnumber - 1]);
+		}
 	}
 	g.dispose();
 	bs.show();
@@ -292,8 +314,12 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	    debug = (debug+1) % 4;
 	    if (debug < 3)
 		objnumber = 0;
-	} else if ((e.getKeyCode() == 74 || e.getKeyCode() == 75) && debug >= 3) {
-	    objnumber = (objnumber + ((e.getKeyCode() == 74) ? -1 : 1)) % (1 + this.blockbase.length);
+	} else if ((e.getKeyCode() == 74) && debug >= 3) {
+	    objnumber = (objnumber + 1) % (1 + this.blockbase.length);
+	} else if (e.getKeyCode() == 73) {
+	    inv = (inv+1) % 2;
+	} else if (e.getKeyCode() == 69) {
+	    this.perso.pick(this.blockbase);
 	}
     }
 
@@ -325,12 +351,14 @@ class object {
     protected int count;
     public int[][] collide;
     public boolean overlaps;
-    private boolean gravity;
+    public boolean gravity;
     private int vector;
     public String type;
     private block[] blocks;
     public List<String> pressed;
     public boolean godown;
+    public boolean pickable;
+    public boolean picked;
     
     public object(int x, int y, int life, String[][] imgs, int[][] collide,boolean overlaps, boolean gravity, String name) {
        	this.type = name;
@@ -339,13 +367,27 @@ class object {
 	this.Y = y;
 	this.life = life;
 	this.state = 0;
-	this.imgs = OPTION.GETIMG(imgs);
 	this.count = 0;
 	this.overlaps = overlaps;
 	this.collide = collide;
 	this.gravity = gravity;
 	this.vector = 1;
 	this.pressed = new ArrayList<String>();
+	this.pickable = this.pickable ? true : false;
+	this.picked = false;
+	if (this.imgs == null)
+	    this.imgs = OPTION.GETIMG(imgs);
+    }
+
+    public object(int x, int y, int life, String[][] imgs, int[][] collide,boolean overlaps, boolean gravity, String name, boolean pickable) {
+	this(x, y, life, imgs, collide, overlaps, gravity, name);
+	this.pickable = true;
+    }
+
+    public object(int x, int y, int life, Image[][] imgs, int[][] collide,boolean overlaps, boolean gravity, String name, boolean pickable) {
+	this(x, y, life, new String[1][1] , collide, overlaps, gravity, name);
+	this.pickable = true;
+	this.imgs = imgs;
     }
 
     public void listblock(block[] b) {
@@ -356,6 +398,10 @@ class object {
 	X += i;
     }
 
+    public void rX(int i) {
+	X = i;
+    }
+
     public int X() {
 	return X;
     }
@@ -364,12 +410,17 @@ class object {
 	Y = Y + i;
     }
 
+    public void rY(int i) {
+	Y = i;
+    }
+
     public int Y() {
 	return Y;
     }
 
     public void life(int i) {
 	life += i;
+	life = life < 0 ? 0 : life > 1000 ? 1000 : life;
     }
 
     public int life() {
@@ -490,7 +541,7 @@ class object {
 
     public Image getimg() {
 	if (life == 0)
-	    return OPTION.NULL;
+	   return OPTION.NULL;
 	if (state >= imgs.length)
 	    state = 0;
 	count++;
@@ -507,7 +558,43 @@ class object {
     }
 }
 
-class inventory { }
+class inventory {
+    private block[] obj;
+
+    public inventory() {
+	obj = new block[8];
+    }
+
+    public boolean add(block o) {
+	for (int i = 0; i < obj.length; i++) {
+	    if (obj[i] == null) {
+		obj[i] = o.clone();
+		o.life(-10000000);
+		obj[i].rY(i * 60 - 20);
+		obj[i].rX(- 10);
+		obj[i].overlaps = true;
+		obj[i].gravity = false;
+		obj[i].picked = true;
+		return true;
+	    }
+	}
+	return false;
+    }
+
+    public boolean remove(String type) {
+	for (int i = 0; i < obj.length; i++) {
+	    if (obj[i] != null && obj[i].type == type) {
+		obj[i] = null;
+		return true;
+	    }
+	}
+	return false;
+    }
+
+    public block[] getinv() {
+	return this.obj;
+    }
+}
 
 class block extends object {
     public block(int x, int y, boolean over, boolean grav, int i){
@@ -517,6 +604,18 @@ class block extends object {
     public block(int x, int y, boolean over, boolean grav, int i, String type){
 	super(x, y, 1000, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, type);
     }
+
+    public block(int x, int y, boolean over, boolean grav, int i, String type, boolean pick){
+	super(x, y, 1000, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, type, pick);
+    }
+
+    public block(int x, int y, int life, boolean over, boolean grav, int[][] col, Image[][] Img, String type, boolean pick){
+	super(x, y, life, Img, col, over, grav, type, pick);
+    }
+
+    public block clone() {
+	return new block(this.X(), this.Y(), this.life(),overlaps, gravity, collide, imgs, type, pickable);
+    }
 }
 
 class personnage extends object{
@@ -524,12 +623,14 @@ class personnage extends object{
     private int speed;
     private int wink;
     public boolean canjump;
+    public inventory inv;
 
     public personnage(int i){
 	super(0, 0, 100, OPTION.OBJECT[i], OPTION.COLLIDE[i], false, true, "perso");
 	speed = OPTION.GETMOVE(6);
 	wink = 0;
 	canjump = false;
+	inv = new inventory();
     }
     
     public Image getimg() {
@@ -555,6 +656,25 @@ class personnage extends object{
 	    ret = (wink > 0 ? 1 : 0);
 	}
 	return this.imgs[state][ret];
+    }
+
+    public void pick(block[] b) {
+	int X = this.X() + (this.collide[state][1] - this.collide[state][0]);
+	int Y = this.Y() + (this.collide[state][3] - this.collide[state][2]);
+	int o[] = new int[4];
+	for (int i = 0; i < b.length; i++) {
+	    if (b[i] != null && b[i].pickable && !b[i].picked && b[i].life() > 0) {
+		o[0] = b[i].X() + b[i].collide[b[i].state()][0];
+		o[1] = b[i].X() + b[i].collide[b[i].state()][1];
+		o[2] = b[i].Y() + b[i].collide[b[i].state()][2];
+		o[3] = b[i].Y() + b[i].collide[b[i].state()][3];
+		if(o[0] <= X && o[1] >= X && o[2] <= Y && o[3] >= Y) {
+		    this.inv.add(b[i]);
+		    b[i] = null;
+		    return;
+		}
+	    }	
+	}
     }
 
     public void move(int  i) {
