@@ -15,8 +15,8 @@ class OPTION {
     public static final boolean GRAV = true;
 
     public static final Image  NULL = Toolkit.getDefaultToolkit().getImage("");
-    public static final String[][][] OBJECT = new String[][][] {{{"./assets/perso.png","./assets/perso_wink.png"}, {"./assets/perso_down.png"}, {"./assets/perso_jump.png"}, {"./assets/perso_rr1.png", "./assets/perso_rr2.png", "./assets/perso_rr3.png", "./assets/perso_rr4.png"}, {"./assets/perso_rl1.png", "./assets/perso_rl2.png", "./assets/perso_rl3.png", "./assets/perso_rl4.png"}, { "./assets/perso_sr.png"}, { "./assets/perso_sl.png"}}, {{"./assets/block1.png"}, {"./assets/block1_damaged1.png"}, {"./assets/block1_damaged2.png"}}, {{"./assets/block2.png"}, {"./assets/block2_damaged1.png"}, {"./assets/block2_damaged2.png"}}, {{"./assets/key_blue_1.png", "./assets/key_blue_2.png", "./assets/key_blue_3.png", "./assets/key_blue_4.png", "./assets/key_blue_5.png", "./assets/key_blue_6.png", "./assets/key_blue_7.png", "./assets/key_blue_8.png", "./assets/key_blue_9.png"}}, {{"./assets/key_red_5.png", "./assets/key_red_6.png", "./assets/key_red_7.png", "./assets/key_red_8.png", "./assets/key_red_1.png", "./assets/key_red_2.png", "./assets/key_red_3.png", "./assets/key_red_4.png"}}, {{"./assets/slash_1.png", "./assets/slash_2.png", "./assets/slash_3.png", "./assets/slash_4.png"}}};
-    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {38,89,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}, {0, 128, 0, 65}, {0, 128, 0, 65}}, {{0, 128, 0, 128}, {0, 128, 0, 128}, {0, 128, 0, 128}}, {{40, 82, 26, 103}}, {{40, 82, 26, 103}}, {{0, 0, 0, 0}}, {{0,0,0,0}}};
+    public static final String[][][] OBJECT = new String[][][] {{{"./assets/perso.png","./assets/perso_wink.png"}, {"./assets/perso_down.png"}, {"./assets/perso_jump.png"}, {"./assets/perso_rr1.png", "./assets/perso_rr2.png", "./assets/perso_rr3.png", "./assets/perso_rr4.png"}, {"./assets/perso_rl1.png", "./assets/perso_rl2.png", "./assets/perso_rl3.png", "./assets/perso_rl4.png"}, { "./assets/perso_sr.png"}, { "./assets/perso_sl.png"}}, {{"./assets/block1.png"}, {"./assets/block1_damaged1.png"}, {"./assets/block1_damaged2.png"}}, {{"./assets/block2.png"}, {"./assets/block2_damaged1.png"}, {"./assets/block2_damaged2.png"}}, {{"./assets/key_blue_1.png", "./assets/key_blue_2.png", "./assets/key_blue_3.png", "./assets/key_blue_4.png", "./assets/key_blue_5.png", "./assets/key_blue_6.png", "./assets/key_blue_7.png", "./assets/key_blue_8.png", "./assets/key_blue_9.png"}}, {{"./assets/key_red_5.png", "./assets/key_red_6.png", "./assets/key_red_7.png", "./assets/key_red_8.png", "./assets/key_red_1.png", "./assets/key_red_2.png", "./assets/key_red_3.png", "./assets/key_red_4.png"}}, {{"./assets/slash_1.png", "./assets/slash_2.png", "./assets/slash_3.png", "./assets/slash_4.png"}}, {{"./assets/enemy1.png", "./assets/enemy2.png", "./assets/enemy3.png"}}};
+    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {38,89,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}, {0, 128, 0, 65}, {0, 128, 0, 65}}, {{0, 128, 0, 128}, {0, 128, 0, 128}, {0, 128, 0, 128}}, {{40, 82, 26, 103}}, {{40, 82, 26, 103}}, {{0, 0, 0, 0}}, {{30,90,30,90}}};
 
     public static final int WIDTH = 160;
     public static final int HEIGHT = WIDTH / 16 * 9;
@@ -49,6 +49,10 @@ class OPTION {
 class calcul extends Thread implements Runnable{
     public calcul(personnage p, int i) {
 	p.move(i);
+    }
+
+    public calcul(personnage e, personnage p) {
+	e.close(p);
     }
 
     public calcul(block[] b, personnage[] e, anime[] a){
@@ -96,7 +100,12 @@ class calcul extends Thread implements Runnable{
 			g.drawImage(imgs[i][i2], 0, 0, obj);
 	    }
 	}
+	imgs = new anime(0, 0, 5, "attack").getimgs();
+	for (int i = 0; i < imgs.length; i++)
+	    for (int i2 = 0; i2 < OPTION.LIMG(imgs[i]); i2++)
+		g.drawImage(imgs[i][i2], 0, 0, obj);
     }
+
 
     public calcul(Game G) {
 	new Thread(new calcul(G.blockbase, G.enemies, G.anime));
@@ -107,6 +116,10 @@ class calcul extends Thread implements Runnable{
 	for (int i = 0; i < G.pressed.toArray().length; i++){
 	    if(G.pressed.toArray()[i] != null)
 		new Thread(new calcul(G.perso, Integer.parseInt((String)G.pressed.toArray()[i])));
+	}
+	for (int i = 0; i < G.enemies.length; i++){
+	    if(G.enemies[i] != null)
+		new Thread(new calcul(G.enemies[i], G.perso));
 	}
 	G.perso.gravity();
 	if(!G.perso.canjump && G.perso.nextCollide("down") == 0)
@@ -133,7 +146,7 @@ class calcul extends Thread implements Runnable{
 	    if(G.addblock(G.perso.drop()))
 		G.inv = 1;
 	} else if (k == 83 || k == 87 || k ==65 || k == 68) {
-	    anime a = G.perso.attack(G.blockbase, G.enemies, (k != 87 ? k != 83 ? k != 65 ? "right" : "left" : "down" : "up"));
+	    anime a = G.perso.attack(G.blockbase, G.enemies, (k != 87 ? k != 83 ? k != 65 ? "right" : "left" : "down" : "up"), 60);
 	    if (a == null)
 		return;
 	    for (int i = 0; i < G.anime.length; i++)
@@ -245,6 +258,9 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	    }
 	    blockbase[i] = new block(0, 500, true, true, 3, "key_blue", true);
 	    blockbase[i + 1] = new block(0, 600, true, true, 4, "key_red", true);
+	    for (i = 0; i < 3; i++)
+		enemies[i] = new personnage();
+		
 	}
     }	
 
@@ -320,6 +336,10 @@ public class Game extends Canvas implements Runnable, KeyListener {
 		g.drawImage(this.blockbase[i].getimg(), this.blockbase[i].Y(), this.blockbase[i].X(), this);
 	}
 	g.drawImage(this.perso.getimg(), this.perso.Y(), this.perso.X(), this);
+	for (int i = 0; i < enemies.length; i++){
+	    if (this.enemies[i] != null)
+		g.drawImage(this.enemies[i].getimg(), this.enemies[i].Y(), this.enemies[i].X(), this);
+	}
 	for (int i = 0; i < anime.length; i++){
 	    if (this.anime[i] != null)
 		g.drawImage(this.anime[i].getimg(), this.anime[i].Y(), this.anime[i].X(), this);
@@ -328,18 +348,32 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	if (debug > 0) {
 	    g.drawString("FPS: " + this._FPS, getWidth() - 165, 20);
 	    if(debug > 1)
-		if (objnumber == 0)
-		    getdata(g, this.perso);
-	        else {
-		    while (this.blockbase[objnumber - 1] == null) {
-			objnumber = (objnumber + 1) % (1 + this.blockbase.length);
+		if (objnumber == 0 || objnumber > this.blockbase.length)
+		    if (objnumber ==0)
+			getdata(g, this.perso);
+		    else {
+			while (this.enemies[objnumber - 1 - this.blockbase.length] == null) {
+			    objnumber = (objnumber + 1) % (1 + this.blockbase.length + this.enemies.length);
+			    if (objnumber == 0){
+				getdata(g, this.perso);
+				break;
+			    }
+			}
+			if (objnumber != 0)
+			    getdata(g, this.enemies[objnumber - this.blockbase.length + 1]);
+		    }
+		    else {
+		    while (this.blockbase[objnumber - 1] == null && objnumber < this.blockbase.length - 1) {
+			objnumber = (objnumber + 1) % (1 + this.blockbase.length + this.enemies.length);
 			if (objnumber == 0){
 			    getdata(g, this.perso);
 			    break;
 			}
 		    }
-		    if (objnumber != 0)
+		    if (objnumber != 0 && objnumber < this.blockbase.length - 1)
 			getdata(g, this.blockbase[objnumber - 1]);
+		    else if (objnumber != 0)
+			getdata(g, this.enemies[objnumber - this.blockbase.length + 1]);
 		}
 	}
 	g.dispose();
@@ -733,6 +767,14 @@ class personnage extends object{
 	canjump = false;
 	inv = new inventory();
     }
+
+    public personnage(){
+	super(0, (Math.random() * 2) >= 1 ? -30 : OPTION.WIDTH*2*OPTION.SCALE + 30, 30, OPTION.OBJECT[6], OPTION.COLLIDE[6], false, false, "perso");
+	speed = OPTION.GETMOVE(3);
+	wink = 0;
+	cooldown = 0;
+	
+    }
     
     public Image getimg() {
 	cooldown--;
@@ -780,13 +822,13 @@ class personnage extends object{
 	return false;
     }
 
-    public anime attack(block[] b, personnage[] e, String dir) {
+    public anime attack(block[] b, personnage[] e, String dir, int lng) {
 	if (cooldown > 0)
 	    return null;
 	int[] XY = new int[2];
 	XY[0] = (dir == "up" || dir == "down" ? dir == "up" ? -1 : 1 : 0);
 	XY[1] = (dir == "left" || dir == "right" ? dir == "left" ? -1 : 1 : 0);
-	int[] XYb = ATTACK.slash(this, b, e, XY);
+	int[] XYb = ATTACK.attack(this, b, e, XY, lng);
 	cooldown = OPTION.FRAME/2;
 	return new anime(XYb[0] - 64, XYb[1] - 64, 5, "attack");
     }	     
@@ -804,6 +846,35 @@ class personnage extends object{
 
     public int doorAndKey() {
 	return -1;
+    }
+
+    public void close(personnage p) {
+	int i = OPTION.GETMOVE(3);
+	String dir;
+	if (Math.random() * 20 > 17){
+	    String[] t = new String [] {"up", "down", "left", "right"};
+	    dir = t[((int)Math.random() * 4)];
+	}else{
+	    int Ydif = this.Y() - p.Y();
+	    int Xdif = this.X() - p.X();
+	    dir = Math.abs(Ydif) > Math.abs(Xdif) ? Ydif < 0 ? "right" : "left" :  Xdif < 0 ? "down" : "up";
+	    if (this.nextCollide(dir) <= 2) {
+		if (Math.abs(Ydif) > Math.abs(Xdif))
+		    Ydif = 0;
+		dir = Math.abs(Ydif) > Math.abs(Xdif) ? Ydif < 0 ? "right" : "left" :  Xdif < 0 ? "down" : "up";
+	    }
+	}
+	int i2 = this.nextCollide(dir);
+	i = i > i2 ? i2 : i;
+	
+	if (dir == "right")
+	    this.Y(i);
+	else if (dir == "left")
+	    this.Y(-i);
+	else if (dir == "up")
+	    this.X(-i);
+	else if (dir == "down")
+	    this.X(i);
     }
     
 
@@ -858,9 +929,9 @@ class anime extends object {
 }    
 
 class ATTACK {
-    public static int[] slash(personnage P, block[] b, personnage[] e, int[] dir) {
-	int X = P.X() + dir[0] * 60 + P.collide[P.state()][0] + (P.collide[P.state()][1] - P.collide[P.state()][0]) / 2 + 7;
-	int Y = P.Y() + dir[1] * 60 + P.collide[P.state()][2] + (P.collide[P.state()][3] - P.collide[P.state()][2]) /4;
+    public static int[] attack(personnage P, block[] b, personnage[] e, int[] dir, int lng) {
+	int X = P.X() + dir[0] * lng + P.collide[P.state()][0] + (P.collide[P.state()][1] - P.collide[P.state()][0]) / 2 + 7;
+	int Y = P.Y() + dir[1] * lng + P.collide[P.state()][2] + (P.collide[P.state()][3] - P.collide[P.state()][2]) /4;
 	int[] XY = new int[] {X, Y};
 	int o[] = new int[4];
 	for (int i = 0; i < b.length; i++) {
@@ -877,10 +948,10 @@ class ATTACK {
 	}
 	for (int i = 0; i < e.length; i++) {
 	    if (e[i] != null && e[i].overlaps == false && e[i].life() > 0) {
-		o[0] = b[i].X() + b[i].collide[b[i].state()][0];
-		o[1] = b[i].X() + b[i].collide[b[i].state()][3];
-		o[2] = b[i].Y() + b[i].collide[b[i].state()][0];
-		o[3] = b[i].Y() + b[i].collide[b[i].state()][1];
+		o[0] = e[i].X() + e[i].collide[e[i].state()][2];
+		o[1] = e[i].X() + e[i].collide[e[i].state()][3];
+		o[2] = e[i].Y() + e[i].collide[e[i].state()][0];
+		o[3] = e[i].Y() + e[i].collide[e[i].state()][1];
 		if(o[0] <= X && o[1] >= X && o[2] <= Y && o[3] >= Y) {
 		    e[i].life(-P.attack);
 		    return XY;
