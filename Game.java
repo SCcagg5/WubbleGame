@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 class OPTION {
-    public static final int FRAME = 70;
+    public static final int FRAME = 60;
     public static final int MIN_FRAME = 20;
     public static final int MAX_FRAME = 250;
 
@@ -15,8 +15,8 @@ class OPTION {
     public static final boolean GRAV = true;
 
     public static final Image  NULL = Toolkit.getDefaultToolkit().getImage("");
-    public static final String[][][] OBJECT = new String[][][] {{{"./assets/perso.png","./assets/perso_wink.png"}, {"./assets/perso_down.png"}, {"./assets/perso_jump.png"}, {"./assets/perso_rr1.png", "./assets/perso_rr2.png", "./assets/perso_rr3.png", "./assets/perso_rr4.png"}, {"./assets/perso_rl1.png", "./assets/perso_rl2.png", "./assets/perso_rl3.png", "./assets/perso_rl4.png"}, { "./assets/perso_sr.png"}, { "./assets/perso_sl.png"}}, {{"./assets/block1.png"}}, {{"./assets/block2.png"}}, {{"./assets/key_blue_1.png", "./assets/key_blue_2.png", "./assets/key_blue_3.png", "./assets/key_blue_4.png", "./assets/key_blue_5.png", "./assets/key_blue_6.png", "./assets/key_blue_7.png", "./assets/key_blue_8.png", "./assets/key_blue_9.png"}}, {{"./assets/key_red_5.png", "./assets/key_red_6.png", "./assets/key_red_7.png", "./assets/key_red_8.png", "./assets/key_red_1.png", "./assets/key_red_2.png", "./assets/key_red_3.png", "./assets/key_red_4.png"}}};
-    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {38,89,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}}, {{0, 128, 0, 128}}, {{40, 82, 26, 103}}, {{40, 82, 26, 103}}};
+    public static final String[][][] OBJECT = new String[][][] {{{"./assets/perso.png","./assets/perso_wink.png"}, {"./assets/perso_down.png"}, {"./assets/perso_jump.png"}, {"./assets/perso_rr1.png", "./assets/perso_rr2.png", "./assets/perso_rr3.png", "./assets/perso_rr4.png"}, {"./assets/perso_rl1.png", "./assets/perso_rl2.png", "./assets/perso_rl3.png", "./assets/perso_rl4.png"}, { "./assets/perso_sr.png"}, { "./assets/perso_sl.png"}}, {{"./assets/block1.png"}, {"./assets/block1_damaged1.png"}, {"./assets/block1_damaged2.png"}}, {{"./assets/block2.png"}, {"./assets/block2_damaged1.png"}, {"./assets/block2_damaged2.png"}}, {{"./assets/key_blue_1.png", "./assets/key_blue_2.png", "./assets/key_blue_3.png", "./assets/key_blue_4.png", "./assets/key_blue_5.png", "./assets/key_blue_6.png", "./assets/key_blue_7.png", "./assets/key_blue_8.png", "./assets/key_blue_9.png"}}, {{"./assets/key_red_5.png", "./assets/key_red_6.png", "./assets/key_red_7.png", "./assets/key_red_8.png", "./assets/key_red_1.png", "./assets/key_red_2.png", "./assets/key_red_3.png", "./assets/key_red_4.png"}}, {{"./assets/slash_1.png", "./assets/slash_2.png", "./assets/slash_3.png", "./assets/slash_4.png"}}};
+    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {38,89,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}, {0, 128, 0, 65}, {0, 128, 0, 65}}, {{0, 128, 0, 128}, {0, 128, 0, 128}, {0, 128, 0, 128}}, {{40, 82, 26, 103}}, {{40, 82, 26, 103}}, {{0, 0, 0, 0}}, {{0,0,0,0}}};
 
     public static final int WIDTH = 160;
     public static final int HEIGHT = WIDTH / 16 * 9;
@@ -51,13 +51,35 @@ class calcul extends Thread implements Runnable{
 	p.move(i);
     }
 
-    public calcul(block[] b){
-	for (int i = 0; i < b.length; i++){
-	    if (b[i] != null){
+    public calcul(block[] b, personnage[] e, anime[] a){
+	for (int i = 0; i < b.length; i++)
+	    if (b[i] != null)
+		if (b[i].life() == 0) {
+		    b[i] = null;
+		} else {
 		b[i].listblock(b);
 		b[i].gravity();
-	    }
-	}
+		}
+	for (int i = 0; i < e.length; i++)
+	    if (e[i] != null)
+		if (e[i].life() == 0) {
+		    e[i] = null;
+		} else {
+		    e[i].listblock(b);
+		    e[i].gravity();
+		}
+	for (int i = 0; i < a.length; i++)
+	    if (a[i] != null)
+		if (a[i].life() == 0)
+		    a[i] = null;
+    }
+
+    public static boolean checkdestroy(block[] b){
+	for (int i = 0; i < b.length; i++)
+	    if (b[i] != null)
+		if (b[i].life() == 0)
+		    return true;
+	return false;
     }
 
     public calcul(Graphics g, Game obj, personnage perso, block[] block)
@@ -77,17 +99,52 @@ class calcul extends Thread implements Runnable{
     }
 
     public calcul(Game G) {
-	new Thread(new calcul(G.blockbase));
+	new Thread(new calcul(G.blockbase, G.enemies, G.anime));
 	G.perso.pressed = G.pressed;
 	if(G.pressed.contains("1") && (G.perso.nextCollide("right") == 0 || G.perso.nextCollide("left") == 0))
 	    G.pressed.remove("1");
 	G.perso.listblock(G.blockbase);
 	for (int i = 0; i < G.pressed.toArray().length; i++){
-	    new Thread(new calcul(G.perso, Integer.parseInt((String)G.pressed.toArray()[i])));
+	    if(G.pressed.toArray()[i] != null)
+		new Thread(new calcul(G.perso, Integer.parseInt((String)G.pressed.toArray()[i])));
 	}
 	G.perso.gravity();
 	if(!G.perso.canjump && G.perso.nextCollide("down") == 0)
 	    G.perso.canjump = true;
+    }
+
+    public calcul(Game G, int k)
+    {
+        if (k == 72) {
+	    G.debug = (G.debug+1) % 4;
+	    if (G.debug < 3)
+		G.objnumber = 0;
+	} else if ((k == 74) && G.debug >= 3) {
+	    G.objnumber = (G.objnumber + 1) % (1 + G.blockbase.length);
+	} else if (k == 73) {
+	    G.inv = (G.inv+1) % 2;
+	} else if (k == 69) {
+	    if(G.perso.pick(G.blockbase)) {
+		G.inv = 1;
+	    }else{
+		G.generateterrain(G.perso.doorAndKey());
+	    }
+	} else if (k == 82) {
+	    if(G.addblock(G.perso.drop()))
+		G.inv = 1;
+	} else if (k == 83 || k == 87 || k ==65 || k == 68) {
+	    anime a = G.perso.attack(G.blockbase, G.enemies, (k != 87 ? k != 83 ? k != 65 ? "right" : "left" : "down" : "up"));
+	    if (a == null)
+		return;
+	    for (int i = 0; i < G.anime.length; i++)
+		if (G.anime[i] == null)
+		    G.anime[i] = a;
+	    if (!calcul.checkdestroy(G.blockbase))
+		return;
+	    new calcul(G.perso, 0);
+	    new calcul(G.perso, 2);
+	    G.perso.state(0);
+	}
     }
 }
 
@@ -101,16 +158,20 @@ public class Game extends Canvas implements Runnable, KeyListener {
     public static Image icon = Toolkit.getDefaultToolkit().getImage("./assets/perso.png");
     
     public personnage perso = new personnage(0);
-    public block[] blockbase = new block[100];
+    public block[] blockbase = new block[25];
+    public personnage[] enemies = new personnage[5];
+    public anime[] anime = new anime[5]; 
+
+
     private int FRAME = OPTION.FRAME;
     private int _FPS;
     private int _minfps = OPTION.MIN_FRAME;
     private int _maxfps = OPTION.MAX_FRAME;
 
-    private int inv = 0;
+    public int inv = 0;
     
-    private int debug = 0;
-    private int objnumber = 0;
+    public int debug = 0;
+    public int objnumber = 0;
 
     public boolean load = true;
     public boolean running = false;
@@ -147,17 +208,18 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	this.start();
     }
 
-    public void addblock(block b) {
+    public boolean addblock(block b) {
 	if (b.type == "none")
-	    return;
+	    return false;
 	for (int i = 0; i < blockbase.length; i++)
 	    if (blockbase[i] == null){
 		blockbase[i] = b.clone();
 		blockbase[i].picked = false;
 		blockbase[i].pickable = true;
 		blockbase[i].gravity = true;
-		return;
+		return true;
 	    }
+	return false;
     }
 
     private synchronized void start() {
@@ -169,13 +231,21 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	running = false;
     }
 
-    public void generateterrain() {
-	int i;
-	for (i = 0; i < OPTION.WIDTH*2*OPTION.SCALE / 128 + 1; i++) {
-	    blockbase[i] = new block((int)(Math.random() * 20 + 10) * 20, i*128, false, true, (int)(Math.random() * 2 + 1));
+    public void generateterrain(int n) {
+	if (n == -1)
+	    return;
+	for (int i = 0; i < blockbase.length; i++)
+	    blockbase[i] = null;
+	this.perso.rX(OPTION.GRAV ? -300 : 10);
+	this.perso.rY(OPTION.WIDTH * OPTION.SCALE - 50);
+	if (n == 0) {
+	    int i;
+     	     for (i = 0; i < OPTION.WIDTH*2*OPTION.SCALE / 128 + 1; i++) {
+		blockbase[i] = new block((int)(Math.random() * 20 + 10) * 20, i*128, false, true, (int)(Math.random() * 2 + 1));
+	    }
+	    blockbase[i] = new block(0, 500, true, true, 3, "key_blue", true);
+	    blockbase[i + 1] = new block(0, 600, true, true, 4, "key_red", true);
 	}
-	blockbase[i] = new block(0, 500, true, true, 3, "key_blue", true);
-	blockbase[i + 1] = new block(0, 600, true, true, 4, "key_red", true);
     }	
 
     public void run() {
@@ -188,7 +258,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	long lastTimer = System.currentTimeMillis();
 	double delta = 0;
 	int sleepFrame = -1 + 1000 / (FRAME >= _maxfps ? _maxfps : FRAME <= _minfps ? _minfps : FRAME);
-	generateterrain();
+	generateterrain(0);
 	while(running) {
 	    long now = System.nanoTime();
 	    delta += (now - lastTime) / nsPerTick;
@@ -235,12 +305,12 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	}
 	if (inv > 0) {
 	    g.setColor(Color.LIGHT_GRAY);
-	    g.fillRect(11,4,240,193);
+	    g.fillRect(11,4,240,97);
 	    block b;
 	    g.setColor(Color.BLACK);
 	    for (int i = 0; i < perso.inv.getinv().length; i++) {
 		b = perso.inv.getinv()[i];
-		g.fillRect(i%4*60 + 12, 5 + i/4 * 96, 58, 95);
+		g.fillRect(i*60 + 12, 5 + i/4 * 96, 58, 95);
 		if (b != null)
 		    g.drawImage(b.getimg(), b.Y(), b.X(), this);
 	    }
@@ -250,6 +320,10 @@ public class Game extends Canvas implements Runnable, KeyListener {
 		g.drawImage(this.blockbase[i].getimg(), this.blockbase[i].Y(), this.blockbase[i].X(), this);
 	}
 	g.drawImage(this.perso.getimg(), this.perso.Y(), this.perso.X(), this);
+	for (int i = 0; i < anime.length; i++){
+	    if (this.anime[i] != null)
+		g.drawImage(this.anime[i].getimg(), this.anime[i].Y(), this.anime[i].X(), this);
+	}
 	g.setColor(Color.YELLOW);
 	if (debug > 0) {
 	    g.drawString("FPS: " + this._FPS, getWidth() - 165, 20);
@@ -277,6 +351,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	g.drawString("next collide right : " + perso.nextCollide("right"), getWidth() - 165, 50);
 	g.drawString("next collide up    : " + perso.nextCollide("up"), getWidth() - 165, 65);
 	g.drawString("next collide down  : " + perso.nextCollide("down"), getWidth() - 165, 80);
+	g.drawString("life               : " + perso.life(), getWidth() - 165, 95);
 	if(debug < 3)
 	    return;
 	g.drawLine(0,perso.X() + perso.collide[perso.state][2],getWidth(),perso.X() + perso.collide[perso.state][2]);
@@ -291,6 +366,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	g.drawString("" + (getHeight() - perso.X() - perso.collide[perso.state][3]), getWidth() - 35, perso.X() + perso.collide[perso.state][3] - 5);
 	g.drawString("" + (perso.Y() + perso.collide[perso.state][0]), perso.Y() + perso.collide[perso.state][0] - 30 > 0 ? perso.Y() + perso.collide[perso.state][0] - 30 : 5 , getHeight() - 5);
 	g.drawString("" + (perso.Y() + perso.collide[perso.state][1]), perso.Y() + perso.collide[perso.state][1] + 30 < getWidth() ? perso.Y() + perso.collide[perso.state][1] + 5 : getWidth() - 30, getHeight() - 5);
+	
     }
 
     public void getdata(Graphics g, block block){
@@ -298,6 +374,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	g.drawString("next collide right : " + block.nextCollide("right"), getWidth() - 165, 50);
 	g.drawString("next collide up    : " + block.nextCollide("up"), getWidth() - 165, 65);
 	g.drawString("next collide down  : " + block.nextCollide("down"), getWidth() - 165, 80);
+	g.drawString("life               : " + block.life(), getWidth() - 165, 95);
 	if(debug < 3)
 	    return;
 	g.drawLine(0,block.X() + block.collide[block.state][2],getWidth(),block.X() + block.collide[block.state][2]);
@@ -319,22 +396,12 @@ public class Game extends Canvas implements Runnable, KeyListener {
     }
 
     public void keyPressed(KeyEvent e) {
-	if (e.getKeyCode() > 36 && e.getKeyCode() < 41 && !pressed.contains("" + (e.getKeyCode() - 37))){
-	    if ((e.getKeyCode() != 38 || this.perso.canjump) || !OPTION.GRAV)
-		pressed.add("" + (e.getKeyCode()-37));
-	} else if (e.getKeyCode() == 72) {
-	    debug = (debug+1) % 4;
-	    if (debug < 3)
-		objnumber = 0;
-	} else if ((e.getKeyCode() == 74) && debug >= 3) {
-	    objnumber = (objnumber + 1) % (1 + this.blockbase.length);
-	} else if (e.getKeyCode() == 73) {
-	    inv = (inv+1) % 2;
-	} else if (e.getKeyCode() == 69) {
-	    this.perso.pick(this.blockbase);
-	} else if (e.getKeyCode() == 82) {
-	    this.addblock(this.perso.drop());
-	}
+	int k = e.getKeyCode();
+	if (k > 36 && k < 41 && !pressed.contains("" + (k - 37))){
+	    if ((k != 38 || perso.canjump) || !OPTION.GRAV)
+		pressed.add("" + (k-37));
+	} else
+	new Thread( new calcul(this, k));
     }
 
     public void keyReleased(KeyEvent e) {
@@ -359,7 +426,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 class object {
     private int X;
     private int Y;
-    private int life;
+    protected int life;
     protected int state;
     protected Image[][] imgs;
     protected int count;
@@ -373,6 +440,7 @@ class object {
     public boolean godown;
     public boolean pickable;
     public boolean picked;
+    public int attack;
     
     public object(int x, int y, int life, String[][] imgs, int[][] collide,boolean overlaps, boolean gravity, String name) {
        	this.type = name;
@@ -386,6 +454,7 @@ class object {
 	this.collide = collide;
 	this.gravity = gravity;
 	this.vector = 1;
+	this.attack = 34;
 	this.pressed = new ArrayList<String>();
 	this.pickable = this.pickable ? true : false;
 	this.picked = false;
@@ -576,7 +645,7 @@ class inventory {
     private block[] obj;
 
     public inventory() {
-	obj = new block[8];
+	obj = new block[4];
     }
 
     public boolean add(block o) {
@@ -611,24 +680,40 @@ class inventory {
 }
 
 class block extends object {
+    private int maxlife;
+    
     public block(int x, int y, boolean over, boolean grav, int i){
-	super(x, y, 1000, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, "block");
+	super(x, y, 100, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, "block");
+	maxlife = 100;
     }
 
     public block(int x, int y, boolean over, boolean grav, int i, String type){
-	super(x, y, 1000, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, type);
+	super(x, y, 100, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, type);
+	maxlife = 100;
     }
 
     public block(int x, int y, boolean over, boolean grav, int i, String type, boolean pick){
-	super(x, y, 1000, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, type, pick);
+	super(x, y, 100, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, type, pick);
+	maxlife = 100;
     }
 
     public block(int x, int y, int life, boolean over, boolean grav, int[][] col, Image[][] Img, String type, boolean pick){
 	super(x, y, life, Img, col, over, grav, type, pick);
+	maxlife = 100;
     }
 
     public block clone() {
 	return new block(this.X(), this.Y(), this.life(),overlaps, gravity, collide, imgs, type, pickable);
+    }
+
+    public void life(int i) {
+	this.life += i;
+	if (this.life() < 0)
+	    this.life = 0;
+	else if (this.life() < 33)
+	    this.state(2);
+	else if (this.life < 67)
+	    this.state(1);
     }
 }
 
@@ -638,16 +723,19 @@ class personnage extends object{
     private int wink;
     public boolean canjump;
     public inventory inv;
+    public int cooldown;
 
     public personnage(int i){
 	super(0, 0, 100, OPTION.OBJECT[i], OPTION.COLLIDE[i], false, true, "perso");
 	speed = OPTION.GETMOVE(6);
 	wink = 0;
+	cooldown = 20;
 	canjump = false;
 	inv = new inventory();
     }
     
     public Image getimg() {
+	cooldown--;
 	if (life() == 0)
 	    return OPTION.NULL;
 	if (state >= imgs.length)
@@ -672,7 +760,7 @@ class personnage extends object{
 	return this.imgs[state][ret];
     }
 
-    public void pick(block[] b) {
+    public boolean pick(block[] b) {
 	int X = this.X() + (this.collide[state][1] - this.collide[state][0]);
 	int Y = this.Y() + (this.collide[state][3] - this.collide[state][2]);
 	int o[] = new int[4];
@@ -685,11 +773,23 @@ class personnage extends object{
 		if(o[0] <= X && o[1] >= X && o[2] <= Y && o[3] >= Y) {
 		    this.inv.add(b[i]);
 		    b[i] = null;
-		    return;
+		    return true;
 		}
-	    }	
+	    }
 	}
+	return false;
     }
+
+    public anime attack(block[] b, personnage[] e, String dir) {
+	if (cooldown > 0)
+	    return null;
+	int[] XY = new int[2];
+	XY[0] = (dir == "up" || dir == "down" ? dir == "up" ? -1 : 1 : 0);
+	XY[1] = (dir == "left" || dir == "right" ? dir == "left" ? -1 : 1 : 0);
+	int[] XYb = ATTACK.slash(this, b, e, XY);
+	cooldown = OPTION.FRAME/2;
+	return new anime(XYb[0] - 64, XYb[1] - 64, 5, "attack");
+    }	     
 
     public block drop() {
 	block[] b = this.inv.getinv();
@@ -701,6 +801,11 @@ class personnage extends object{
 	    }
 	return (new block(-100, -100, true, true, 3, "none", true));
     }
+
+    public int doorAndKey() {
+	return -1;
+    }
+    
 
     public void move(int  i) {
 	if (i % 2 == 0) {
@@ -723,5 +828,65 @@ class personnage extends object{
 	    }
 
 	}
+    }
+}
+
+class anime extends object {
+    private int time;
+    
+    public anime(int x, int y, int i, String type){
+	super(x, y, 1, OPTION.OBJECT[i], OPTION.COLLIDE[i], true, false, type);
+	this.time = OPTION.FRAME * 2;
+    }
+
+    public Image getimg() {
+	time--;
+	if (time < 0)
+	    this.life(-10);
+	if (this.life() == 0)
+	    return OPTION.NULL;
+	if (state >= imgs.length)
+	    state = 0;
+	count++;
+	if(count >= OPTION.FRAME)
+	    count = 0;
+	int n = OPTION.LIMG(imgs[state]);
+	int f = OPTION.FRAME;
+	int ret = ((int) Math.ceil(count * n / f));
+	return this.imgs[state][ret];
+    }
+}    
+
+class ATTACK {
+    public static int[] slash(personnage P, block[] b, personnage[] e, int[] dir) {
+	int X = P.X() + dir[0] * 60 + P.collide[P.state()][0] + (P.collide[P.state()][1] - P.collide[P.state()][0]) / 2 + 7;
+	int Y = P.Y() + dir[1] * 60 + P.collide[P.state()][2] + (P.collide[P.state()][3] - P.collide[P.state()][2]) /4;
+	int[] XY = new int[] {X, Y};
+	int o[] = new int[4];
+	for (int i = 0; i < b.length; i++) {
+	    if (b[i] != null && b[i].overlaps == false && b[i].life() > 0) {
+		o[0] = b[i].X() + b[i].collide[b[i].state()][2];
+		o[1] = b[i].X() + b[i].collide[b[i].state()][3];
+		o[2] = b[i].Y() + b[i].collide[b[i].state()][0];
+		o[3] = b[i].Y() + b[i].collide[b[i].state()][1];
+		if(o[0] <= X && o[1] >= X && o[2] <= Y && o[3] >= Y) {
+		    b[i].life(-P.attack);
+		    return XY;
+		}
+	    }
+	}
+	for (int i = 0; i < e.length; i++) {
+	    if (e[i] != null && e[i].overlaps == false && e[i].life() > 0) {
+		o[0] = b[i].X() + b[i].collide[b[i].state()][0];
+		o[1] = b[i].X() + b[i].collide[b[i].state()][3];
+		o[2] = b[i].Y() + b[i].collide[b[i].state()][0];
+		o[3] = b[i].Y() + b[i].collide[b[i].state()][1];
+		if(o[0] <= X && o[1] >= X && o[2] <= Y && o[3] >= Y) {
+		    e[i].life(-P.attack);
+		    return XY;
+		}
+	    }
+	}
+	return XY;
     }
 }
