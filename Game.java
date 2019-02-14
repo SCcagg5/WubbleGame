@@ -12,11 +12,41 @@ class OPTION {
     public static final int MAX_FRAME = 250;
 
     public static final int MAX_GRAV = 2;
-    public static final boolean GRAV = true;
+    public static final boolean GRAV = false;
 
     public static final Image  NULL = Toolkit.getDefaultToolkit().getImage("");
-    public static final String[][][] OBJECT = new String[][][] {{{"./assets/perso.png","./assets/perso_wink.png"}, {"./assets/perso_down.png"}, {"./assets/perso_jump.png"}, {"./assets/perso_rr1.png", "./assets/perso_rr2.png", "./assets/perso_rr3.png", "./assets/perso_rr4.png"}, {"./assets/perso_rl1.png", "./assets/perso_rl2.png", "./assets/perso_rl3.png", "./assets/perso_rl4.png"}, { "./assets/perso_sr.png"}, { "./assets/perso_sl.png"}}, {{"./assets/block1.png"}, {"./assets/block1_damaged1.png"}, {"./assets/block1_damaged2.png"}}, {{"./assets/block2.png"}, {"./assets/block2_damaged1.png"}, {"./assets/block2_damaged2.png"}}, {{"./assets/key_blue_1.png", "./assets/key_blue_2.png", "./assets/key_blue_3.png", "./assets/key_blue_4.png", "./assets/key_blue_5.png", "./assets/key_blue_6.png", "./assets/key_blue_7.png", "./assets/key_blue_8.png", "./assets/key_blue_9.png"}}, {{"./assets/key_red_5.png", "./assets/key_red_6.png", "./assets/key_red_7.png", "./assets/key_red_8.png", "./assets/key_red_1.png", "./assets/key_red_2.png", "./assets/key_red_3.png", "./assets/key_red_4.png"}}, {{"./assets/slash_1.png", "./assets/slash_2.png", "./assets/slash_3.png", "./assets/slash_4.png"}}, {{"./assets/enemy1.png", "./assets/enemy2.png", "./assets/enemy3.png"}}};
-    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {38,89,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}, {0, 128, 0, 65}, {0, 128, 0, 65}}, {{0, 128, 0, 128}, {0, 128, 0, 128}, {0, 128, 0, 128}}, {{40, 82, 26, 103}}, {{40, 82, 26, 103}}, {{0, 0, 0, 0}}, {{30,90,30,90}}};
+    public static final String[][][] OBJECT = new String[][][] {
+	{
+	    {"./assets/perso.png","./assets/perso_wink.png"},
+	    {"./assets/perso_down.png"}, {"./assets/perso_jump.png"},
+	    {"./assets/perso_rr1.png", "./assets/perso_rr2.png", "./assets/perso_rr3.png", "./assets/perso_rr4.png"},
+	    {"./assets/perso_rl1.png", "./assets/perso_rl2.png", "./assets/perso_rl3.png", "./assets/perso_rl4.png"},
+	    { "./assets/perso_sr.png"}, { "./assets/perso_sl.png"}
+	},
+	{
+	    {"./assets/block1.png"},
+	    {"./assets/block1_damaged1.png"},
+	    {"./assets/block1_damaged2.png"}
+	},
+	{
+	    {"./assets/block2.png"},
+	    {"./assets/block2_damaged1.png"},
+	    {"./assets/block2_damaged2.png"}
+	},
+	{
+	    {"./assets/key_blue_1.png", "./assets/key_blue_2.png", "./assets/key_blue_3.png", "./assets/key_blue_4.png", "./assets/key_blue_5.png", "./assets/key_blue_6.png", "./assets/key_blue_7.png", "./assets/key_blue_8.png", "./assets/key_blue_9.png"}
+	},
+	{
+	    {"./assets/key_red_5.png", "./assets/key_red_6.png", "./assets/key_red_7.png", "./assets/key_red_8.png", "./assets/key_red_1.png", "./assets/key_red_2.png", "./assets/key_red_3.png", "./assets/key_red_4.png"}
+	},
+	{
+	    {"./assets/slash_1.png", "./assets/slash_2.png", "./assets/slash_3.png", "./assets/slash_4.png"}
+	},
+	{
+	    {"./assets/enemy1.png", "./assets/enemy2.png", "./assets/enemy3.png"}
+	}
+    };
+    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {38,89,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}, {0, 128, 0, 65}, {0, 128, 0, 65}}, {{0, 128, 0, 128}, {0, 128, 0, 128}, {0, 128, 0, 128}}, {{40, 82, 26, 103}}, {{40, 82, 26, 103}}, {{0, 0, 0, 0}}, {{25,95,25,95}}};
 
     public static final int WIDTH = 160;
     public static final int HEIGHT = WIDTH / 16 * 9;
@@ -67,7 +97,7 @@ class calcul extends Thread implements Runnable{
 	for (int i = 0; i < e.length; i++)
 	    if (e[i] != null)
 		if (e[i].life() == 0) {
-		    e[i] = null;
+		    e[i] = new personnage();
 		} else {
 		    e[i].listblock(b);
 		    e[i].gravity();
@@ -556,7 +586,7 @@ class object {
 	if (this.gravity && OPTION.GRAV){
 	    if (this.canfall()) {
 		this.vector += this.vector * 2 > OPTION.MAX_GRAV ? OPTION.MAX_GRAV : this.vector >= 2 ? this.vector / 2 : 1;
-		this.move(OPTION.GETMOVE(this.vector)/3, "down");
+		this.move(OPTION.GETMOVE(this.vector)/5, "down");
 	    } else
 		this.vector = 1;
 	}
@@ -769,7 +799,7 @@ class personnage extends object{
     }
 
     public personnage(){
-	super(0, (Math.random() * 2) >= 1 ? -30 : OPTION.WIDTH*2*OPTION.SCALE + 30, 30, OPTION.OBJECT[6], OPTION.COLLIDE[6], false, false, "perso");
+	super((int)(Math.random() * 5) * 40 , (Math.random() * 2) >= 1 ? 30 : OPTION.WIDTH*2*OPTION.SCALE, 30, OPTION.OBJECT[6], OPTION.COLLIDE[6], false, false, "perso");
 	speed = OPTION.GETMOVE(3);
 	wink = 0;
 	cooldown = 0;
@@ -851,7 +881,7 @@ class personnage extends object{
     public void close(personnage p) {
 	int i = OPTION.GETMOVE(3);
 	String dir;
-	if (Math.random() * 20 > 17){
+	if (Math.random() * 6 > 5){
 	    String[] t = new String [] {"up", "down", "left", "right"};
 	    dir = t[((int)Math.random() * 4)];
 	}else{
@@ -893,7 +923,7 @@ class personnage extends object{
 	    }else {
 		if ((this.state() == 0 || this.state() == 5 || this.state() == 6) && nextCollide("down") != 0)
 		    this.state(2);
-		this.move(OPTION.GRAV ? OPTION.GETMOVE(20) : this.speed, "up");
+		this.move(OPTION.GRAV ? OPTION.GETMOVE(15) : this.speed, "up");
 		canjump = false;
 		this.godown = true;
 	    }
