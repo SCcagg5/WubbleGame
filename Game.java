@@ -5,6 +5,11 @@ import java.awt.event.*;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.Socket;
 
 class OPTION {
     public static final int FRAME = 60;
@@ -12,7 +17,7 @@ class OPTION {
     public static final int MAX_FRAME = 250;
 
     public static final int MAX_GRAV = 2;
-    public static final boolean GRAV = false;
+    public static final boolean GRAV = true;
 
     public static final Image  NULL = Toolkit.getDefaultToolkit().getImage("");
     public static final String[][][] OBJECT = new String[][][] {
@@ -189,7 +194,20 @@ class calcul extends Thread implements Runnable{
 	    G.perso.state(0);
 	}
     }
+
+    public calcul(){}
+    
+    public static String callserv(String serverAddress) {
+	try {
+	Socket socket = new Socket(serverAddress, 9090);
+	BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+	String response = in.readLine();
+	return response;
+	} catch (Exception e) {}
+	return null;
+    }
 }
+
 
 public class Game extends Canvas implements Runnable, KeyListener {
     private static final long serialVersionUID = 1L;
@@ -274,7 +292,11 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	running = false;
     }
 
+
     public void generateterrain(int n) {
+	System.out.println("Enter the IP address of a machine running the date server:");
+	String serverAddress = new Scanner(System.in).nextLine();
+	block[] t = new calcul().callserv(serverAddress);
 	if (n == -1)
 	    return;
 	for (int i = 0; i < blockbase.length; i++)
@@ -282,8 +304,9 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	this.perso.rX(OPTION.GRAV ? -300 : 10);
 	this.perso.rY(OPTION.WIDTH * OPTION.SCALE - 50);
 	if (n == 0) {
+	    
 	    int i;
-     	     for (i = 0; i < OPTION.WIDTH*2*OPTION.SCALE / 128 + 1; i++) {
+     	    for (i = 0; i < OPTION.WIDTH*2*OPTION.SCALE / 128 + 1; i++) {
 		blockbase[i] = new block((int)(Math.random() * 20 + 10) * 20, i*128, false, true, (int)(Math.random() * 2 + 1));
 	    }
 	    blockbase[i] = new block(0, 500, true, true, 3, "key_blue", true);
@@ -291,6 +314,9 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	    for (i = 0; i < 3; i++)
 		enemies[i] = new personnage();
 		
+	}
+	if (t != null) {
+	    blockbase = t;
 	}
     }	
 
