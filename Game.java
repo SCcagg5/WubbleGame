@@ -10,6 +10,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+
 
 class OPTION {
     public static final int FRAME = 60;
@@ -74,7 +78,7 @@ class OPTION {
 	return ret;
     }
 
-    public static int LIMG(Image[] img) {
+    public static int LIMG(String[] img) {
 	int i;
 	for (i = 0; i < img.length && img[i] != null; i++); 
 	return i;
@@ -123,22 +127,22 @@ class calcul extends Thread implements Runnable{
 
     public calcul(Graphics g, Game obj, personnage perso, block[] block)
     {
-	Image[][] imgs = perso.getimgs();
+	String[][] imgs = perso.getimgs();
 	for (int i = 0; i < imgs.length; i++)
 	    for (int i2 = 0; i2 < OPTION.LIMG(imgs[i]); i2++)
-		g.drawImage(imgs[i][i2], 0, 0, obj);
+		g.drawImage(Toolkit.getDefaultToolkit().getImage(imgs[i][i2]), 0, 0, obj);
 	for (int i3 = 0; i3 < block.length; i3++) {
 	    if(block[i3] != null) {
 		imgs = block[i3].getimgs();
 		for (int i = 0; i < imgs.length; i++)
 		    for (int i2 = 0; i2 < OPTION.LIMG(imgs[i]); i2++)
-			g.drawImage(imgs[i][i2], 0, 0, obj);
+			g.drawImage(Toolkit.getDefaultToolkit().getImage(imgs[i][i2]), 0, 0, obj);
 	    }
 	}
 	imgs = new anime(0, 0, 5, "attack").getimgs();
 	for (int i = 0; i < imgs.length; i++)
 	    for (int i2 = 0; i2 < OPTION.LIMG(imgs[i]); i2++)
-		g.drawImage(imgs[i][i2], 0, 0, obj);
+		g.drawImage(Toolkit.getDefaultToolkit().getImage(imgs[i][i2]), 0, 0, obj);
     }
 
 
@@ -148,9 +152,10 @@ class calcul extends Thread implements Runnable{
 	if(G.pressed.contains("1") && (G.perso.nextCollide("right") == 0 || G.perso.nextCollide("left") == 0))
 	    G.pressed.remove("1");
 	G.perso.listblock(G.blockbase);
-	for (int i = 0; i < G.pressed.toArray().length; i++){
-	    if(G.pressed.toArray()[i] != null)
-		new Thread(new calcul(G.perso, Integer.parseInt((String)G.pressed.toArray()[i])));
+	Object[] pressed = G.pressed.toArray();
+	for (int i = 0; i < pressed.length; i++){
+	    if(pressed[i] != null)
+		new Thread(new calcul(G.perso, Integer.parseInt((String)pressed[i])));
 	}
 	for (int i = 0; i < G.enemies.length; i++){
 	    if(G.enemies[i] != null)
@@ -197,11 +202,11 @@ class calcul extends Thread implements Runnable{
 
     public calcul(){}
     
-    public static String callserv(String serverAddress) {
+    public static block[] callserv(String serverAddress) {
 	try {
 	Socket socket = new Socket(serverAddress, 9090);
-	BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-	String response = in.readLine();
+	 ObjectInputStream in = new  ObjectInputStream(socket.getInputStream());
+	 block[] response = (block[]) in.readObject();
 	return response;
 	} catch (Exception e) {}
 	return null;
@@ -513,12 +518,12 @@ public class Game extends Canvas implements Runnable, KeyListener {
     }
 }
 
-class object {
+class object implements Serializable {
     private int X;
     private int Y;
     protected int life;
     protected int state;
-    protected Image[][] imgs;
+    protected String[][] imgs;
     protected int count;
     public int[][] collide;
     public boolean overlaps;
@@ -549,18 +554,12 @@ class object {
 	this.pickable = this.pickable ? true : false;
 	this.picked = false;
 	if (this.imgs == null)
-	    this.imgs = OPTION.GETIMG(imgs);
+	    this.imgs = imgs;
     }
 
     public object(int x, int y, int life, String[][] imgs, int[][] collide,boolean overlaps, boolean gravity, String name, boolean pickable) {
 	this(x, y, life, imgs, collide, overlaps, gravity, name);
-	this.pickable = true;
-    }
-
-    public object(int x, int y, int life, Image[][] imgs, int[][] collide,boolean overlaps, boolean gravity, String name, boolean pickable) {
-	this(x, y, life, new String[1][1] , collide, overlaps, gravity, name);
-	this.pickable = true;
-	this.imgs = imgs;
+	this.pickable = pickable;
     }
 
     public void listblock(block[] b) {
@@ -723,10 +722,10 @@ class object {
 	int n = OPTION.LIMG(imgs[state]);
 	int f = OPTION.FRAME;
 	int ret = ((int) Math.ceil(count * n / f));
-	return this.imgs[state][ret];
+	return Toolkit.getDefaultToolkit().getImage(this.imgs[state][ret]);
     }
 
-    public Image[][] getimgs(){
+    public String[][] getimgs(){
 	return this.imgs;
     }
 }
@@ -771,29 +770,34 @@ class inventory {
 
 class block extends object {
     private int maxlife;
+    private int numb; 
     
     public block(int x, int y, boolean over, boolean grav, int i){
 	super(x, y, 100, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, "block");
 	maxlife = 100;
+	numb = i;
     }
 
     public block(int x, int y, boolean over, boolean grav, int i, String type){
 	super(x, y, 100, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, type);
 	maxlife = 100;
+	numb = i;
     }
 
     public block(int x, int y, boolean over, boolean grav, int i, String type, boolean pick){
 	super(x, y, 100, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, type, pick);
 	maxlife = 100;
+	numb = i;
     }
 
-    public block(int x, int y, int life, boolean over, boolean grav, int[][] col, Image[][] Img, String type, boolean pick){
-	super(x, y, life, Img, col, over, grav, type, pick);
+    public block(int x, int y, int life, boolean over, boolean grav, int i, String type, boolean pick){
+	super(x, y, life, OPTION.OBJECT[i], OPTION.COLLIDE[i], over, grav, type, pick);
 	maxlife = 100;
+	numb = i;
     }
 
     public block clone() {
-	return new block(this.X(), this.Y(), this.life(),overlaps, gravity, collide, imgs, type, pickable);
+	return new block(this.X(), this.Y(), this.life(),overlaps, gravity, numb, type, pickable);
     }
 
     public void life(int i) {
@@ -825,7 +829,7 @@ class personnage extends object{
     }
 
     public personnage(){
-	super((int)(Math.random() * 5) * 40 , (Math.random() * 2) >= 1 ? 30 : OPTION.WIDTH*2*OPTION.SCALE, 30, OPTION.OBJECT[6], OPTION.COLLIDE[6], false, false, "perso");
+	super((int)(Math.random() * 5) * 40 , (Math.random() * 2) >= 1 ? 30 : OPTION.WIDTH*2*OPTION.SCALE, 30, OPTION.OBJECT[6], OPTION.COLLIDE[6], false, false, "ennemy");
 	speed = OPTION.GETMOVE(3);
 	wink = 0;
 	cooldown = 0;
@@ -855,7 +859,7 @@ class personnage extends object{
 	    wink = wink > 30 ? 30 : wink;
 	    ret = (wink > 0 ? 1 : 0);
 	}
-	return this.imgs[state][ret];
+	return Toolkit.getDefaultToolkit().getImage(this.imgs[state][ret]);
     }
 
     public boolean pick(block[] b) {
@@ -980,7 +984,7 @@ class anime extends object {
 	int n = OPTION.LIMG(imgs[state]);
 	int f = OPTION.FRAME;
 	int ret = ((int) Math.ceil(count * n / f));
-	return this.imgs[state][ret];
+	return Toolkit.getDefaultToolkit().getImage(this.imgs[state][ret]);
     }
 }    
 
