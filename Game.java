@@ -55,7 +55,39 @@ class OPTION {
 	    {"./assets/enemy1.png", "./assets/enemy2.png", "./assets/enemy3.png"}
 	}
     };
-    public static final int[][][] COLLIDE = new int[][][] {{{37, 90, 50, 100}, {37, 90, 65, 100}, {38,89,50,100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}, {37, 90, 50, 100}}, {{0, 128, 0, 65}, {0, 128, 0, 65}, {0, 128, 0, 65}}, {{0, 128, 0, 128}, {0, 128, 0, 128}, {0, 128, 0, 128}}, {{40, 82, 26, 103}}, {{40, 82, 26, 103}}, {{0, 0, 0, 0}}, {{25,95,25,95}}};
+    public static final int[][][] COLLIDE = new int[][][] {
+	{
+	    {37, 90, 50, 100},
+	    {37, 90, 65, 100},
+	    {38,89,50,100},
+	    {37, 90, 50, 100},
+	    {37, 90, 50, 100},
+	    {37, 90, 50, 100},
+	    {37, 90, 50, 100}
+	},
+	{
+	    {0, 128, 0, 65},
+	    {0, 128, 0, 65},
+	    {0, 128, 0, 65}
+	},
+	{
+	    {0, 128, 0, 128},
+	    {0, 128, 0, 128},
+	    {0, 128, 0, 128}
+	},
+	{
+	    {40, 82, 26, 103}
+	},
+	{
+	    {40, 82, 26, 103}
+	},
+	{
+	    {0, 0, 0, 0}
+	},
+	{
+	    {25,95,25,95}
+	}
+    };
 
     public static final int WIDTH = 160;
     public static final int HEIGHT = WIDTH / 16 * 9;
@@ -94,10 +126,11 @@ class calcul extends Thread implements Runnable{
 	e.close(p);
     }
 
-    public calcul(block[] b, personnage[] e, anime[] a){
+    public calcul(block[] b, personnage[] e, anime[] a, Game G){
 	for (int i = 0; i < b.length; i++)
 	    if (b[i] != null)
 		if (b[i].life() == 0) {
+		    G.destroyed = true;
 		    b[i] = null;
 		} else {
 		b[i].listblock(b);
@@ -147,7 +180,7 @@ class calcul extends Thread implements Runnable{
 
 
     public calcul(Game G) {
-	new Thread(new calcul(G.blockbase, G.enemies, G.anime));
+	new Thread(new calcul(G.blockbase, G.enemies, G.anime, G));
 	G.perso.pressed = G.pressed;
 	if(G.pressed.contains("1") && (G.perso.nextCollide("right") == 0 || G.perso.nextCollide("left") == 0))
 	    G.pressed.remove("1");
@@ -164,6 +197,53 @@ class calcul extends Thread implements Runnable{
 	G.perso.gravity();
 	if(!G.perso.canjump && G.perso.nextCollide("down") == 0)
 	    G.perso.canjump = true;
+	G.count++;
+	if ( G.ip != "-1" && G.count > 10)
+	    try {
+		G.count = 0;
+		G.destroyed = false;
+		Socket soc = null;
+		Data t = null;
+		ObjectOutputStream out = null;
+		ObjectInputStream in = null;
+		while (true) {
+		    try {
+			soc = new Socket(G.ip, 9090);
+			soc.setSoTimeout(200);
+			out = new ObjectOutputStream(soc.getOutputStream());
+			in = new ObjectInputStream(soc.getInputStream());
+			break;
+		    } catch (Exception e) {
+			if (soc != null)
+			    soc.close();
+		    }
+		}
+		Data g = new Data();
+		g.perso = G.perso;
+		g.number = G.number_perso;
+		g.blockbase = G.blockbase;
+		out.writeObject(g);
+		out.flush();
+		t = (Data) in.readObject();
+		if (t != null) {
+		    if (count(t.blockbase) < count(G.blockbase))
+			G.blockbase = t.blockbase;
+		    G.persos = t.persos;
+		    G.persos[G.number_perso] = null;
+		}
+		soc.close();
+	    } catch (Exception e) {
+	    }
+    }
+
+    public static int count(block[] b) {
+	int i = 0;
+	int count = 0;
+	if (b != null)
+	    for (; i < b.length; i++)
+		if(b[i] != null)
+		    count++;
+	return count;
     }
 
     public calcul(Game G, int k)
@@ -202,13 +282,19 @@ class calcul extends Thread implements Runnable{
 
     public calcul(){}
     
-    public static block[] callserv(String serverAddress) {
+    public static Data callserv(String s) {
 	try {
-	Socket socket = new Socket(serverAddress, 9090);
-	 ObjectInputStream in = new  ObjectInputStream(socket.getInputStream());
-	 block[] response = (block[]) in.readObject();
-	return response;
-	} catch (Exception e) {}
+	    Socket soc = new Socket(s, 9090);
+	    ObjectOutputStream out = new ObjectOutputStream(soc.getOutputStream());
+	    ObjectInputStream in = new ObjectInputStream(soc.getInputStream());
+	    out.writeObject(null);
+	    out.flush();
+	    Data response = (Data) in.readObject();
+	    soc.close();
+	    return response;
+	} catch (Exception e) {
+	    e.printStackTrace();
+	}
 	return null;
     }
 }
@@ -220,9 +306,12 @@ public class Game extends Canvas implements Runnable, KeyListener {
     public static final String NAME = "Wubble";
     static JButton play;
     static Container pane;
-
-    public static Image icon = Toolkit.getDefaultToolkit().getImage("./assets/perso.png");
     
+    public String ip = null;
+    public Socket soc;
+
+    public personnage[] persos = new personnage[5];
+    public int number_perso = -1;
     public personnage perso = new personnage(0);
     public block[] blockbase = new block[25];
     public personnage[] enemies = new personnage[5];
@@ -233,6 +322,9 @@ public class Game extends Canvas implements Runnable, KeyListener {
     private int _FPS;
     private int _minfps = OPTION.MIN_FRAME;
     private int _maxfps = OPTION.MAX_FRAME;
+    public int count = 0;
+
+    public boolean destroyed = false;
 
     public int inv = 0;
     
@@ -261,7 +353,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
 	frame.add(this, BorderLayout.CENTER);
 	frame.pack();
-	frame.setIconImage(icon);
+	frame.setIconImage(Toolkit.getDefaultToolkit().getImage("./assets/perso.png"));
 
 	frame.setResizable(false);
 	frame.setLocationRelativeTo(null);
@@ -272,6 +364,10 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	addKeyListener(this);
 	frame.requestFocusInWindow();
 	this.start();
+    }
+
+    public Game(int i) {
+	ip = "-1";
     }
 
     public boolean addblock(block b) {
@@ -299,17 +395,34 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
 
     public void generateterrain(int n) {
-	System.out.println("Enter the IP address of a machine running the date server:");
-	String serverAddress = new Scanner(System.in).nextLine();
-	block[] t = new calcul().callserv(serverAddress);
 	if (n == -1)
 	    return;
+	Data G = null;
+	String serverAddress = "";
+	if (ip == null) {
+	    System.out.println("Enter the server address (or no/n/N):");
+	    serverAddress = new Scanner(System.in).nextLine();
+	    if (!serverAddress.equals("no") && !serverAddress.equals("n") && !serverAddress.equals("N")){
+		G = new calcul().callserv(this.ip);
+		if (G != null && G.blockbase != null) {
+		    n = 99;
+		    blockbase = G.blockbase;
+		    ip = serverAddress;
+		    number_perso = G.number;
+		    persos = G.persos;
+		    persos[number_perso] = null;
+		    System.out.println("working");
+		    return;
+		} else {
+		    ip = "-1";
+		}
+	    }
+	}
 	for (int i = 0; i < blockbase.length; i++)
 	    blockbase[i] = null;
 	this.perso.rX(OPTION.GRAV ? -300 : 10);
 	this.perso.rY(OPTION.WIDTH * OPTION.SCALE - 50);
 	if (n == 0) {
-	    
 	    int i;
      	    for (i = 0; i < OPTION.WIDTH*2*OPTION.SCALE / 128 + 1; i++) {
 		blockbase[i] = new block((int)(Math.random() * 20 + 10) * 20, i*128, false, true, (int)(Math.random() * 2 + 1));
@@ -319,9 +432,6 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	    for (i = 0; i < 3; i++)
 		enemies[i] = new personnage();
 		
-	}
-	if (t != null) {
-	    blockbase = t;
 	}
     }	
 
@@ -375,6 +485,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	}
 	new Thread(new calcul(this));
 	Graphics g = bs.getDrawGraphics();
+
 	g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
 	if(load){
 	    new Thread(new calcul(g, this, this.perso, this.blockbase));
@@ -400,6 +511,10 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	for (int i = 0; i < enemies.length; i++){
 	    if (this.enemies[i] != null)
 		g.drawImage(this.enemies[i].getimg(), this.enemies[i].Y(), this.enemies[i].X(), this);
+	}
+	for (int i = 0; i < persos.length; i++){
+	    if (this.persos[i] != null)
+		g.drawImage(this.persos[i].getimg(), this.persos[i].Y(), this.persos[i].X(), this);
 	}
 	for (int i = 0; i < anime.length; i++){
 	    if (this.anime[i] != null)
@@ -730,7 +845,7 @@ class object implements Serializable {
     }
 }
 
-class inventory {
+class inventory implements Serializable{
     private block[] obj;
 
     public inventory() {
