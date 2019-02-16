@@ -39,7 +39,7 @@ class ServerLaunch {
 			out.writeObject(G);
 			out.flush();
 			socket.close();
-			if (t != null && count(t.blockbase) < count(G.blockbase))
+			if (t != null && swapblock(t.blockbase, G.blockbase) && t.number != -1)
 			    G.blockbase = t.blockbase;
 			socket.close();
 		    } catch (Exception e) {e.printStackTrace();}
@@ -49,6 +49,13 @@ class ServerLaunch {
 	    System.out.print(e);
 	}
     }
+    public boolean swapblock(block[] t, block[] b) {
+	for (int i = 0; i < b.length; i++)
+	    if ((b[i] != null && t[i] == null) || (b[i] != null && b[i].life() > t[i].life()))
+		return true;
+	return false;
+    }
+    
 
     public static void getterrain(Data G) {
 	int i;

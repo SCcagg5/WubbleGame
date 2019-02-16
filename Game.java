@@ -16,7 +16,7 @@ import java.io.Serializable;
 
 
 class OPTION {
-    public static final int FRAME = 60;
+    public static final int FRAME = 50;
     public static final int MIN_FRAME = 20;
     public static final int MAX_FRAME = 250;
 
@@ -53,6 +53,9 @@ class OPTION {
 	},
 	{
 	    {"./assets/enemy1.png", "./assets/enemy2.png", "./assets/enemy3.png"}
+	},
+	{
+	    {"./assets/door_1.png", "./assets/door_2.png", "./assets/door_3.png"}
 	}
     };
     public static final int[][][] COLLIDE = new int[][][] {
@@ -86,14 +89,19 @@ class OPTION {
 	},
 	{
 	    {25,95,25,95}
+	},
+	{
+	    {50,270,40,278}
 	}
     };
 
-    public static final int WIDTH = 160;
+    public static final int WIDTH = 180;
     public static final int HEIGHT = WIDTH / 16 * 9;
     public static final int SCALE = 3;
 
     public static final int SIZE_WIDTH = OPTION.WIDTH*OPTION.SCALE;
+
+
     public static final int SIZE_HEIGHT = OPTION.HEIGHT*OPTION.SCALE;
     public static final int PSIZE_WIDTH = OPTION.SIZE_WIDTH*2;
     public static final int PSIZE_HEIGHT = OPTION.SIZE_HEIGHT*2;
@@ -139,6 +147,7 @@ class calcul extends Thread implements Runnable{
 	for (int i = 0; i < e.length; i++)
 	    if (e[i] != null)
 		if (e[i].life() == 0) {
+		    G.score += 10;
 		    e[i] = new personnage();
 		} else {
 		    e[i].listblock(b);
@@ -226,8 +235,8 @@ class calcul extends Thread implements Runnable{
 		out.flush();
 		t = (Data) in.readObject();
 		if (t != null) {
-		    if (count(t.blockbase) < count(G.blockbase))
-			G.blockbase = t.blockbase;
+		    if (swapblock(t.blockbase, G.blockbase))
+		    G.blockbase = t.blockbase;
 		    G.persos = t.persos;
 		    G.persos[G.number_perso] = null;
 		}
@@ -236,16 +245,13 @@ class calcul extends Thread implements Runnable{
 	    }
     }
 
-    public static int count(block[] b) {
-	int i = 0;
-	int count = 0;
-	if (b != null)
-	    for (; i < b.length; i++)
-		if(b[i] != null)
-		    count++;
-	return count;
+    public boolean swapblock(block[] t, block[] b) {
+	for (int i = 0; i < b.length; i++)
+	    if ((b[i] != null && t[i] == null) || (b[i] != null && b[i].life() > t[i].life()))
+		return true;
+	return false;
     }
-
+    
     public calcul(Game G, int k)
     {
         if (k == 72) {
@@ -260,7 +266,11 @@ class calcul extends Thread implements Runnable{
 	    if(G.perso.pick(G.blockbase)) {
 		G.inv = 1;
 	    }else{
-		G.generateterrain(G.perso.doorAndKey());
+		int i = G.perso.doorAndKey(G.blockbase);
+		if (i != -1) {
+		    G.ip = "-1";
+		    G.generateterrain(i);
+		}
 	    }
 	} else if (k == 82) {
 	    if(G.addblock(G.perso.drop()))
@@ -292,9 +302,7 @@ class calcul extends Thread implements Runnable{
 	    Data response = (Data) in.readObject();
 	    soc.close();
 	    return response;
-	} catch (Exception e) {
-	    e.printStackTrace();
-	}
+	} catch (Exception e) {}
 	return null;
     }
 }
@@ -323,6 +331,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
     private int _minfps = OPTION.MIN_FRAME;
     private int _maxfps = OPTION.MAX_FRAME;
     public int count = 0;
+    public int score = 0;
 
     public boolean destroyed = false;
 
@@ -333,6 +342,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
     public boolean load = true;
     public boolean running = false;
+    public boolean invinsible = false;
 
     private JFrame frame;
 
@@ -391,6 +401,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 
     public synchronized void stop() {
 	running = false;
+	System.out.println("Gameover");
     }
 
 
@@ -400,22 +411,21 @@ public class Game extends Canvas implements Runnable, KeyListener {
 	Data G = null;
 	String serverAddress = "";
 	if (ip == null) {
-	    System.out.println("Enter the server address (or no/n/N):");
+	    System.out.println("Enter the server address :");
 	    serverAddress = new Scanner(System.in).nextLine();
-	    if (!serverAddress.equals("no") && !serverAddress.equals("n") && !serverAddress.equals("N")){
-		G = new calcul().callserv(this.ip);
-		if (G != null && G.blockbase != null) {
-		    n = 99;
-		    blockbase = G.blockbase;
-		    ip = serverAddress;
-		    number_perso = G.number;
-		    persos = G.persos;
-		    persos[number_perso] = null;
-		    System.out.println("working");
-		    return;
-		} else {
-		    ip = "-1";
-		}
+	    G = new calcul().callserv(this.ip);
+	    if (G != null && G.blockbase != null) {
+		n = 99;
+		blockbase = G.blockbase;
+		ip = serverAddress;
+		number_perso = G.number;
+		persos = G.persos;
+		persos[number_perso] = null;
+		System.out.println("working");
+		return;
+	    } else {
+		ip = "-1";
+		n = 0;
 	    }
 	}
 	for (int i = 0; i < blockbase.length; i++)
@@ -427,12 +437,92 @@ public class Game extends Canvas implements Runnable, KeyListener {
      	    for (i = 0; i < OPTION.WIDTH*2*OPTION.SCALE / 128 + 1; i++) {
 		blockbase[i] = new block((int)(Math.random() * 20 + 10) * 20, i*128, false, true, (int)(Math.random() * 2 + 1));
 	    }
-	    blockbase[i] = new block(0, 500, true, true, 3, "key_blue", true);
-	    blockbase[i + 1] = new block(0, 600, true, true, 4, "key_red", true);
+	    blockbase[i] = new block(0, 500, true, true, 3, "key", true);
+	    blockbase[i + 1] = new block(0, 600, true, true, 4, "key", true);
+	    blockbase[i + 2] = new block(0, 700, 3,true, true, 7, "door", false);
 	    for (i = 0; i < 3; i++)
 		enemies[i] = new personnage();
 		
 	}
+	if (n == 1) {
+	    int i;
+	    for (i = 0; i < OPTION.WIDTH*2*OPTION.SCALE / 128 + 1; i++) {
+		blockbase[i] = new block((int)(Math.random() * 20 + 10) * 20, i*128, false, true, 1);
+	    }
+	    blockbase[i] = new block(0, 500, true, true, 3, "key", true);
+	    blockbase[i + 1] = new block(100, 300 ,1000, false, false, 1, "block", true);
+	    blockbase[i + 2] = new block(300, 500 ,1000, false, false, 1, "block", true);
+	    blockbase[i + 3] = new block(0, 700, 3,true, true, 7, "door", false);
+	    for (i = 0; i < 3; i++)
+		enemies[i] = new personnage();
+
+	}if (n == 2) {
+	    invinsible = true;
+	    System.out.println("Select your mini Game : \n1- + & -\n2- quizz\n3- rock paper scissor");
+	    String in = new Scanner(System.in).nextLine();
+	    if (!in.equals("1") && !in.equals("2") && !in.equals("3")) {
+		System.out.println("Wrong selection: " + in + "\n\n");
+		generateterrain(2);
+		return;
+	    }
+	    if (in.equals("1")) {
+		int rand = (int)(Math.random() * 100 + 1) ;
+		int i;
+		for (i = 0; i < 10; i++){
+		    int intin = (int) Integer.parseInt(new Scanner(System.in).nextLine());
+		    if (intin == rand){
+			score += 200;
+			System.out.println("You won & get 200 points");
+			break;
+		    }
+		    else if (intin > rand)
+			System.out.println("The number is lower");
+		    else
+			System.out.println("The number is Higher");
+		}
+		if (i >= 10)
+		    System.out.println("You lose");
+	    }
+
+	    if (in.equals("2")) {
+		int rand;
+		int i2;
+		String response;
+		for (i2 = 0; i2 < 2; i2++) { 
+		    rand = (int)(Math.random() * 2) ;
+		    String[][] quest = new String[][] {{"Qui a invente le C", "Dennis Ritchie", "Daniel Krieg", "Moi", "Alexa"}, {"Qui a fait une nuit blanche ?", "Moi", "Eliot", "Personne", "la nuit c'est noir"}};
+		    System.out.println(quest[rand][0]);
+		    System.out.println("- " + quest[rand][1]);
+		    System.out.println("- " + quest[rand][2]);
+		    System.out.println("- " + quest[rand][3]);
+		    System.out.println("- " + quest[rand][4]);
+		    response = new Scanner(System.in).nextLine();
+		    if (!response.equals(quest[rand][rand + 1])) {
+			System.out.println("You lose");
+			break;
+		    }
+		    System.out.println("Good answer");
+		}
+		if (i2 >= 2) {
+		    score += 300;
+		    System.out.println("You won & get 300 points");
+		}
+	    }
+	    if (in.equals("3")) {
+		System.out.println("1- rock\n2- paper\n3- scissor");
+		int rpsbot = (int)(Math.random() * 3 + 1);
+		String[] played = new String[] {"rock", "paper", "scissor"};
+		int rps = (int) Integer.parseInt(new Scanner(System.in).nextLine());
+		System.out.println("the bot played " + played[rpsbot - 1]);
+		if (rps > 0 && rps < 4 && rps > rpsbot || (rps == 1 && rpsbot == 3)){
+		    score += 50;
+		    System.out.println("You won and get 50 points");
+		} else {
+		    System.out.println("You loose");
+		}
+	    }
+	    generateterrain(0);
+	    invinsible = false;}
     }	
 
     public void run() {
@@ -478,6 +568,9 @@ public class Game extends Canvas implements Runnable, KeyListener {
     }
 
     public void render(int frames) {
+	if (this.perso.life() == 0 || this.perso.touchWall("down") == 0)
+	    if (!invinsible)
+		stop();
 	BufferStrategy bs = getBufferStrategy();
 	if(bs ==null) {
 	    createBufferStrategy(3);
@@ -552,6 +645,7 @@ public class Game extends Canvas implements Runnable, KeyListener {
 			getdata(g, this.enemies[objnumber - this.blockbase.length + 1]);
 		}
 	}
+	g.drawString("SCORE  : " + this.score, 500, 35);
 	g.dispose();
 	bs.show();
     }
@@ -846,7 +940,7 @@ class object implements Serializable {
 }
 
 class inventory implements Serializable{
-    private block[] obj;
+    public block[] obj;
 
     public inventory() {
 	obj = new block[4];
@@ -870,7 +964,7 @@ class inventory implements Serializable{
 
     public boolean remove(String type) {
 	for (int i = 0; i < obj.length; i++) {
-	    if (obj[i] != null && obj[i].type == type) {
+	    if (obj[i] != null && obj[i].type.equals(type)) {
 		obj[i] = null;
 		return true;
 	    }
@@ -1019,7 +1113,22 @@ class personnage extends object{
 	return (new block(-100, -100, true, true, 3, "none", true));
     }
 
-    public int doorAndKey() {
+    public int doorAndKey(block[] b) {
+	int X = this.X() + (this.collide[state][1] - this.collide[state][0]);
+	int Y = this.Y() + (this.collide[state][3] - this.collide[state][2]);
+	int o[] = new int[4];
+	for (int i = 0; i < b.length; i++) {
+	    if (b[i] != null && b[i].type == "door" && b[i].life() > 0) {
+		o[0] = b[i].X() + b[i].collide[b[i].state()][0];
+		o[1] = b[i].X() + b[i].collide[b[i].state()][1];
+		o[2] = b[i].Y() + b[i].collide[b[i].state()][2];
+		o[3] = b[i].Y() + b[i].collide[b[i].state()][3];
+		if(o[0] <= X && o[1] >= X && o[2] <= Y && o[3] >= Y) {
+		    this.inv.remove("key");
+		    return b[i].life() - 1;
+		}
+	    }
+	}
 	return -1;
     }
 
@@ -1116,7 +1225,7 @@ class ATTACK {
 		o[2] = b[i].Y() + b[i].collide[b[i].state()][0];
 		o[3] = b[i].Y() + b[i].collide[b[i].state()][1];
 		if(o[0] <= X && o[1] >= X && o[2] <= Y && o[3] >= Y) {
-		    b[i].life(-P.attack);
+		    b[i].life(-P.attack - (P.inv.obj[0] != null ? 30 : 0));
 		    return XY;
 		}
 	    }
